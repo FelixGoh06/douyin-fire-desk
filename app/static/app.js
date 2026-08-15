@@ -47,6 +47,9 @@
   document.querySelectorAll("[data-modal-close]").forEach((button) => {
     button.addEventListener("click", () => button.closest("dialog")?.close());
   });
+  document.querySelectorAll("dialog[data-modal-open-on-load]").forEach((dialog) => {
+    if (dialog.showModal) dialog.showModal();
+  });
 
   document.querySelectorAll("[data-toggle-control]").forEach((control) => {
     const target = document.querySelector(`[data-toggle-target="${control.dataset.toggleControl}"]`);

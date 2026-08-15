@@ -646,7 +646,10 @@ def test_admin_password_change_requires_current_password_and_logs_out(monkeypatc
     monkeypatch.setattr(main_module, "update_admin_password", updated_passwords.append)
     with TestClient(app) as client:
         client.post("/login", data={"username": "admin", "password": "test-password"})
-        token = csrf_from(client.get("/system").text)
+        system_page = client.get("/system")
+        assert 'data-modal-open="adminPasswordDialog"' in system_page.text
+        assert 'id="adminPasswordDialog"' in system_page.text
+        token = csrf_from(system_page.text)
         changed = client.post(
             "/system/password",
             data={
@@ -677,3 +680,6 @@ def test_admin_password_change_requires_current_password_and_logs_out(monkeypatc
         assert rejected.status_code == 303
         assert "/system?error=" in rejected.headers["location"]
         assert updated_passwords == ["NewPassword2026!"]
+        error_page = client.get(rejected.headers["location"])
+        assert "data-modal-open-on-load" in error_page.text
+        assert "当前密码不正确" in error_page.text

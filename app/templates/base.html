@@ -40,6 +40,9 @@
           <span class="state-dot"></span>
           执行器{% if runner_enabled %}已启用{% else %}未启用{% endif %}
         </span>
+        <button class="nav-item nav-button password-button" type="button" data-modal-open="adminPasswordDialog">
+          <i data-lucide="key-round"></i><span>修改密码</span>
+        </button>
         <form action="{{ base_path }}/logout" method="post">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <button class="nav-item nav-button" type="submit">
@@ -69,6 +72,26 @@
     </main>
   </div>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <dialog class="modal-dialog password-dialog" id="adminPasswordDialog" aria-labelledby="adminPasswordDialogTitle" {% if error %}data-modal-open-on-load{% endif %}>
+    <form method="post" action="{{ base_path }}/system/password">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="modal-header">
+        <div><span class="page-kicker">SECURITY / ADMIN ACCESS</span><h2 id="adminPasswordDialogTitle">修改管理员密码</h2></div>
+        <button class="icon-button" type="button" data-modal-close title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        {% if error %}<div class="notice danger" role="alert">{{ error }}</div>{% endif %}
+        <label class="field"><span>当前密码</span><input name="current_password" type="password" autocomplete="current-password" required></label>
+        <label class="field"><span>新密码</span><input name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required><small>至少 12 位；可使用字母、数字和常见英文符号。</small></label>
+        <label class="field"><span>确认新密码</span><input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+      </div>
+      <div class="modal-footer">
+        <span>保存后将自动重启后台并退出登录</span>
+        <button class="button secondary" type="button" data-modal-close>取消</button>
+        <button class="button primary" type="submit"><i data-lucide="key-round"></i>更新密码</button>
+      </div>
+    </form>
+  </dialog>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="{{ url_for('static', path='/app.js') }}"></script>
   {% block scripts %}{% endblock %}

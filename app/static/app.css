@@ -53,6 +53,7 @@ svg { width: 17px; height: 17px; flex: 0 0 auto; }
 .nav-item.active { color: var(--ink); font-family: var(--display); font-weight: 800; }
 .nav-item.active::after { background: var(--terracotta); }
 .nav-button { font-size: 14px; }
+.password-button { margin-bottom: 2px; }
 .sidebar-footer { margin-top: auto; display: grid; gap: 7px; border-top: 3px solid var(--ink); padding-top: 10px; }
 .runner-state { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 7px; color: var(--muted); font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .05em; }
 .state-dot { width: 8px; height: 8px; border: 1px solid var(--rule-dark); border-radius: 50%; background: transparent; }
@@ -302,6 +303,11 @@ tbody tr:hover { background: var(--sheet); }
 .modal-header h2 { margin: 2px 0 0; font-family: var(--display); font-size: 24px; }
 .modal-body { display: grid; gap: 18px; padding: 22px 20px 24px; background: var(--sheet); }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 20px; border-top: 1px solid var(--rule-dark); }
+.modal-footer > span { margin-right: auto; align-self: center; color: var(--muted); font-family: var(--display); font-size: 12px; line-height: 1.4; }
+.password-dialog { width: min(510px, calc(100vw - 30px)); }
+.password-dialog .modal-header .page-kicker { display: block; margin: 0; }
+.password-dialog .modal-body { gap: 16px; }
+.password-dialog .notice { margin: 0; }
 .task-log-dialog { width: min(1040px, calc(100vw - 30px)); }
 .task-log-body { display: grid; gap: 20px; padding: 22px 20px 24px; background: var(--sheet); }
 .task-log-overview { display: grid; gap: 9px; padding: 16px; border: 1px solid var(--rule); background: var(--paper); }
@@ -418,6 +424,8 @@ tbody tr:hover { background: var(--sheet); }
   .login-cover { min-height: 320px; padding: 70px 10px 38px; border-right: 0; border-bottom: 1px solid var(--rule-dark); }
   .login-cover h1 { font-size: 54px; }
   .login-form { padding: 34px 10px 40px; background: transparent; }
+  .password-dialog .modal-footer { align-items: stretch; flex-wrap: wrap; }
+  .password-dialog .modal-footer > span { width: 100%; margin-right: 0; }
 }
 
 @media (max-width: 480px) {

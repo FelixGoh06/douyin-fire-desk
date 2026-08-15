@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.2 - 2026-08-15
+
+- Moved administrator password management to a consistent sidebar action and modal dialog.
+- Added automatic reopening of the password dialog after validation errors.
+
 ## v1.0.1 - 2026-08-15
 
 - Added the System-page administrator password change flow with current-password verification, CSRF protection, format validation, automatic logout, and controlled service restart.
