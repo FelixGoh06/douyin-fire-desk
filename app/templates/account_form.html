@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block actions %}
+{% if account %}<a class="button secondary" href="{{ base_path }}/accounts/{{ account.id }}"><i data-lucide="arrow-left"></i><span>返回</span></a>{% else %}<a class="button secondary" href="{{ base_path }}/accounts"><i data-lucide="arrow-left"></i><span>返回</span></a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="task-editor account-editor" method="post" action="{{ base_path }}{% if account %}/accounts/{{ account.id }}{% else %}/accounts{% endif %}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="task-editor-layout">
+    <div class="task-editor-main">
+      <section class="editor-section" aria-labelledby="accountBasicTitle">
+        <header class="editor-section-header">
+          <span class="editor-section-index">01</span>
+          <div><h2 id="accountBasicTitle">账号信息</h2><p>用于识别执行身份，并指定独立浏览器环境。</p></div>
+        </header>
+        <div class="editor-section-body editor-content-fields">
+          <label class="field"><span>账号名称</span><input name="name" value="{{ account.name if account else '' }}" placeholder="例如：主账号" required maxlength="60"></label>
+          <label class="field"><span>浏览器 Profile</span><input class="account-profile-input" name="profile_path" value="{{ account.profile_path if account else '' }}" placeholder="/var/lib/douyin-fire-profiles/account1"><small>每个账号使用独立目录，避免登录状态互相覆盖。</small></label>
+        </div>
+      </section>
+
+      <section class="editor-section" aria-labelledby="accountCookieTitle">
+        <header class="editor-section-header">
+          <span class="editor-section-index">02</span>
+          <div><h2 id="accountCookieTitle">登录凭证</h2><p>Cookie 仅加密保存，后台不会显示已保存的明文。</p></div>
+        </header>
+        <div class="editor-section-body editor-content-fields">
+          <label class="field secret-field">
+            <span>抖音 Cookie</span>
+            <textarea class="account-cookie-input" name="cookie_value" rows="8" {% if not account %}required{% endif %} placeholder="sessionid=...; sessionid_ss=...; ttwid=...">{% if account and account.has_cookie %}{% endif %}</textarea>
+            <small>{% if account and account.has_cookie %}当前已有加密 Cookie；留空保存不会覆盖。粘贴新内容才会更新。{% else %}支持 Cookie Header 或浏览器导出的 JSON。{% endif %}</small>
+          </label>
+          {% if account and account.has_cookie %}
+          <label class="account-clear-control">
+            <span class="switch-copy"><strong>清除当前 Cookie</strong><small>下次保存时移除凭证，账号将无法执行任务。</small></span>
+            <input type="checkbox" name="clear_cookie">
+          </label>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="editor-section" aria-labelledby="accountAccessTitle">
+        <header class="editor-section-header">
+          <span class="editor-section-index">03</span>
+          <div><h2 id="accountAccessTitle">访问设置</h2><p>设置执行器进入抖音聊天页时使用的入口。</p></div>
+        </header>
+        <div class="editor-section-body editor-content-fields">
+          <label class="field"><span>目标页面</span><input type="url" name="target_url" value="{{ account.target_url if account else 'https://www.douyin.com/chat' }}" required></label>
+          <label class="field"><span>备注</span><textarea name="notes" rows="4" placeholder="仅后台可见，可留空">{{ account.notes if account else '' }}</textarea></label>
+        </div>
+      </section>
+    </div>
+
+    <aside class="task-editor-rail" aria-label="账号环境设置">
+      <section class="editor-rail-section task-state-section">
+        <span class="rail-kicker">ACCOUNT STATUS</span>
+        <label class="switch-control">
+          <span class="switch-copy"><strong>启用账号</strong><small>停用后，该账号关联任务不会自动执行</small></span>
+          <input type="checkbox" name="enabled" {% if not account or account.enabled %}checked{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="accountRegionTitle">
+        <header class="rail-section-header"><i data-lucide="globe-2"></i><div><h2 id="accountRegionTitle">运行环境</h2><span>影响定时任务的时间计算</span></div></header>
+        <div class="rail-fields">
+          <label class="field"><span>时区</span><select name="timezone"><option value="Asia/Shanghai" {% if not account or account.timezone == 'Asia/Shanghai' %}selected{% endif %}>Asia/Shanghai</option><option value="Asia/Tokyo" {% if account and account.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo</option></select></label>
+        </div>
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="accountCookieStateTitle">
+        <header class="rail-section-header"><i data-lucide="shield-check"></i><div><h2 id="accountCookieStateTitle">Cookie 状态</h2><span>保存后可在账号详情执行检测</span></div></header>
+        <div class="account-cookie-state">
+          <span class="status {% if account and account.has_cookie %}{{ account.cookie_status }}{% else %}blocked{% endif %}">{% if not account or not account.has_cookie %}未保存{% else %}{{ {'valid':'有效','expired':'失效','unknown':'待检测','missing':'未保存'}.get(account.cookie_status, account.cookie_status) }}{% endif %}</span>
+          <p>{% if account and account.has_cookie %}更新 Cookie 后状态会重置为待检测。{% else %}需要先保存 Cookie 才能执行续火和晚间检查。{% endif %}</p>
+        </div>
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="accountPrivacyTitle">
+        <header class="rail-section-header"><i data-lucide="lock-keyhole"></i><div><h2 id="accountPrivacyTitle">凭证保护</h2><span>服务器端加密存储</span></div></header>
+        <p class="rail-note">后台只允许写入或替换 Cookie，不提供明文读取接口。</p>
+      </section>
+    </aside>
+  </div>
+  <div class="task-editor-actions">
+    <span>{% if account %}保存后立即刷新账号任务调度{% else %}创建后即可添加独立续火任务{% endif %}</span>
+    <button class="button primary" type="submit"><i data-lucide="save"></i><span>{% if account %}保存账号{% else %}创建账号{% endif %}</span></button>
+  </div>
+</form>
+{% endblock %}

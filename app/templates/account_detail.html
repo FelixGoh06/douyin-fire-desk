@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<a class="button secondary" href="{{ base_path }}/accounts/{{ account.id }}/edit"><i data-lucide="pencil"></i><span>编辑账号</span></a>
+<form method="post" action="{{ base_path }}/accounts/{{ account.id }}/run/login_check"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit"><i data-lucide="shield-check"></i><span>检测登录</span></button></form>
+<a class="button primary" href="{{ base_path }}/tasks/new?account_id={{ account.id }}"><i data-lucide="plus"></i><span>创建任务</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="account-status-band">
+  <div><span>账号状态</span><strong>{% if account.enabled %}启用{% else %}停用{% endif %}</strong></div>
+  <div><span>登录状态</span><strong class="status-text {{ account.login_status }}">{{ {'valid':'有效','expired':'失效','unknown':'未知'}.get(account.login_status, account.login_status) }}</strong></div>
+  <div><span>Cookie</span><strong class="status-text {{ account.cookie_status }}">{% if not account.has_cookie %}未保存{% else %}{{ {'valid':'有效','expired':'失效','unknown':'待检测','missing':'未保存'}.get(account.cookie_status, account.cookie_status) }}{% endif %}</strong><small>{{ account.cookie_updated_at|datetime }}</small></div>
+  <div><span>关联任务</span><strong>{{ tasks|length }}</strong></div>
+  <div><span>最近成功</span><strong>{{ account.last_success_at|datetime }}</strong></div>
+</section>
+
+<section class="panel">
+  <div class="section-header"><div><h2>关联任务</h2><span>定时、目标和消息配置在任务中管理</span></div><a class="text-link" href="{{ base_path }}/tasks/new?account_id={{ account.id }}">创建任务</a></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>任务</th><th>状态</th><th>每日发送</th><th>目标</th><th>下次执行</th><th>最近结果</th><th></th></tr></thead>
+      <tbody>
+      {% for task in tasks %}
+      <tr>
+        <td><a class="primary-link" href="{{ base_path }}/tasks/{{ task.id }}">{{ task.name }}</a></td>
+        <td><span class="status {% if task.enabled %}success{% else %}blocked{% endif %}">{% if task.enabled %}启用{% else %}停用{% endif %}</span></td>
+        <td>{{ task.send_time }}</td>
+        <td>{{ task.target_count }}</td>
+        <td>{{ task.next_jobs.send|default('-')|datetime }}</td>
+        <td><span class="status {{ task.last_run_status or 'unknown' }}">{{ task.last_run_status or '无记录' }}</span></td>
+        <td class="actions-cell"><a class="icon-button" href="{{ base_path }}/tasks/{{ task.id }}" title="查看任务" aria-label="查看任务"><i data-lucide="chevron-right"></i></a></td>
+      </tr>
+      {% else %}<tr><td colspan="7" class="empty-row">这个账号还没有任务</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-header"><div><h2>最近执行</h2><span>该账号的检测与任务记录</span></div><a class="text-link" href="{{ base_path }}/runs">全部记录</a></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>任务</th><th>类型</th><th>状态</th><th>开始</th><th>结果</th></tr></thead>
+      <tbody>
+      {% for run in runs %}
+      <tr><td>#{{ run.id }}</td><td>{{ run.automation_task_name or '账号检测' }}</td><td>{{ {'send':'发送','night_check':'晚间检查','login_check':'登录检测'}.get(run.task_type, run.task_type) }}</td><td><span class="status {{ run.status }}">{{ run.status }}</span></td><td>{{ run.started_at|datetime }}</td><td class="summary-cell">{{ run.summary or '-' }}</td></tr>
+      {% else %}<tr><td colspan="6" class="empty-row">暂无执行记录</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="danger-zone">
+  <form method="post" action="{{ base_path }}/accounts/{{ account.id }}/delete" data-confirm="确定删除账号及其全部任务？">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="button danger" type="submit"><i data-lucide="trash-2"></i><span>删除账号</span></button>
+  </form>
+</section>
+{% endblock %}

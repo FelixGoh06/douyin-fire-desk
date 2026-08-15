@@ -1,0 +1,8 @@
+APScheduler==3.11.0
+cryptography==45.0.6
+fastapi==0.116.1
+httpx==0.28.1
+Jinja2==3.1.6
+playwright==1.54.0
+python-multipart==0.0.20
+uvicorn==0.35.0

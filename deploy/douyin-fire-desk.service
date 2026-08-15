@@ -1,0 +1,22 @@
+[Unit]
+Description=Douyin Fire Desk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=douyin-fire
+Group=douyin-fire
+WorkingDirectory=/opt/douyin-fire-desk
+EnvironmentFile=/etc/douyin-fire-desk.env
+ExecStart=/opt/douyin-fire-desk/.venv/bin/python /opt/douyin-fire-desk/run.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/douyin-fire-desk /var/lib/douyin-fire-profiles
+
+[Install]
+WantedBy=multi-user.target

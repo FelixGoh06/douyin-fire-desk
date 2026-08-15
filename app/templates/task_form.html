@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block actions %}
+{% if task %}<a class="button secondary" href="{{ base_path }}/tasks/{{ task.id }}"><i data-lucide="arrow-left"></i><span>返回</span></a>{% else %}<a class="button secondary" href="{{ base_path }}/tasks"><i data-lucide="arrow-left"></i><span>返回</span></a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="task-editor" method="post" action="{{ base_path }}{% if task %}/tasks/{{ task.id }}{% else %}/tasks{% endif %}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="task-editor-layout">
+    <div class="task-editor-main">
+      <section class="editor-section" aria-labelledby="taskBasicTitle">
+        <header class="editor-section-header">
+          <span class="editor-section-index">01</span>
+          <div><h2 id="taskBasicTitle">基本信息</h2><p>用于在任务列表中识别这条自动化。</p></div>
+        </header>
+        <div class="editor-section-body editor-fields">
+          <label class="field"><span>任务名称</span><input name="name" value="{{ task.name if task else '' }}" placeholder="例如：每天给科宏续火" required maxlength="80"></label>
+          <label class="field"><span>执行账号</span><select name="account_id" required>{% for account in accounts %}<option value="{{ account.id }}" {% if selected_account_id == account.id %}selected{% endif %}>{{ account.name }}</option>{% endfor %}</select></label>
+        </div>
+      </section>
+
+      <section class="editor-section" aria-labelledby="taskTargetTitle">
+        <header class="editor-section-header">
+          <span class="editor-section-index">02</span>
+          <div><h2 id="taskTargetTitle">好友与消息</h2><p>昵称需要与抖音当前显示完全一致。</p></div>
+        </header>
+        <div class="editor-section-body editor-content-fields">
+          {% if not task %}
+          <label class="field"><span>目标好友昵称</span><textarea class="target-nickname-input" name="target_nicknames" rows="4" placeholder="每行一个好友昵称"></textarea><small>可一次添加多个好友，每行填写一个。</small></label>
+          {% endif %}
+          {% if task %}
+          <section class="target-edit-list" aria-labelledby="targetEditTitle">
+            <div><span class="field-label" id="targetEditTitle">目标好友昵称</span><small>修改昵称不会清除该好友已有的火花状态和消息配置。</small></div>
+            {% for target in targets %}
+            <label class="target-edit-row"><span>{{ '%02d'|format(loop.index) }}</span><input type="hidden" name="target_id" value="{{ target.id }}"><input name="target_nickname" value="{{ target.nickname }}" required maxlength="80" aria-label="好友昵称 {{ loop.index }}"></label>
+            {% else %}
+            <p class="target-edit-empty">尚未设置目标好友。保存任务后，在任务详情中添加好友。</p>
+            {% endfor %}
+          </section>
+          {% endif %}
+          <label class="field"><span>消息模板</span><textarea class="message-template-input" name="message_template" rows="5">{{ task.message_template if task else '续火' }}</textarea><small>可使用 <strong>[天数]</strong> 占位符，例如“今天是第 [天数] 天”。</small></label>
+          <label class="field"><span>备注</span><textarea name="notes" rows="3" placeholder="仅后台可见，可留空">{{ task.notes if task else '' }}</textarea></label>
+        </div>
+      </section>
+    </div>
+
+    <aside class="task-editor-rail" aria-label="任务计划设置">
+      <section class="editor-rail-section task-state-section">
+        <span class="rail-kicker">TASK STATUS</span>
+        <label class="switch-control">
+          <span class="switch-copy"><strong>启用任务</strong><small>保存后按设定时间自动执行</small></span>
+          <input type="checkbox" name="enabled" {% if not task or task.enabled %}checked{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="sendPlanTitle">
+        <header class="rail-section-header"><i data-lucide="send"></i><div><h2 id="sendPlanTitle">发送计划</h2><span>每天执行一次</span></div></header>
+        <div class="rail-fields">
+          <label class="field"><span>发送时间</span><input type="time" name="send_time" value="{{ task.send_time if task else '09:00' }}" required></label>
+          <label class="field"><span>时区</span><select name="timezone"><option value="Asia/Shanghai" {% if not task or task.timezone == 'Asia/Shanghai' %}selected{% endif %}>Asia/Shanghai</option><option value="Asia/Tokyo" {% if task and task.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo</option></select></label>
+        </div>
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="nightPlanTitle">
+        <header class="rail-section-header"><i data-lucide="moon-star"></i><div><h2 id="nightPlanTitle">晚间检查</h2><span>检查对方今天是否续火</span></div></header>
+        <label class="switch-control compact-switch">
+          <span class="switch-copy"><strong>启用检查</strong><small>{% if openclaw_configured %}完成后由 OpenClaw 汇总推送{% else %}需要先配置 OpenClaw 才能开启{% endif %}</small></span>
+          <input type="checkbox" name="night_check_enabled" data-toggle-control="night-check-time" {% if task and task.night_check_enabled %}checked{% endif %} {% if not openclaw_configured %}disabled aria-disabled="true"{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+        <div class="rail-fields toggle-dependent" data-toggle-target="night-check-time">
+          <label class="field"><span>检查时间</span><input type="time" name="night_check_time" value="{{ task.night_check_time if task else '23:20' }}" required></label>
+        </div>
+        {% if not openclaw_configured %}<a class="rail-note-link" href="{{ base_path }}/openclaw">查看 OpenClaw 对接状态</a>{% endif %}
+      </section>
+
+      <section class="editor-rail-section" aria-labelledby="reliabilityTitle">
+        <header class="rail-section-header"><i data-lucide="shield-check"></i><div><h2 id="reliabilityTitle">容错设置</h2><span>网络波动时自动恢复</span></div></header>
+        <div class="rail-fields rail-fields-split">
+          <label class="field"><span>重试次数</span><input type="number" name="retry_count" min="0" max="10" value="{{ task.retry_count if task else 3 }}"></label>
+          <label class="field"><span>超时秒数</span><input type="number" name="timeout_seconds" min="30" max="1800" step="30" value="{{ task.timeout_seconds if task else 300 }}"></label>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <div class="task-editor-actions">
+    <span>保存后将立即刷新任务调度</span>
+    <button class="button primary" type="submit"><i data-lucide="save"></i><span>保存任务</span></button>
+  </div>
+</form>
+{% endblock %}

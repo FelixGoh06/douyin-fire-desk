@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="{{ base_path }}/" aria-label="{{ app_name }}">
+        <span class="brand-mark">火</span>
+        <span class="brand-copy"><strong>{{ app_name }}</strong><small>FIRE DESK / DAILY</small></span>
+      </a>
+      <div class="edition-label">OPERATIONS JOURNAL · 01</div>
+      <nav class="nav-list" aria-label="主导航">
+        <a href="{{ base_path }}/" class="nav-item {% if active == 'dashboard' %}active{% endif %}">
+          <i data-lucide="layout-dashboard"></i><span>总览</span>
+        </a>
+        <a href="{{ base_path }}/accounts" class="nav-item {% if active == 'accounts' %}active{% endif %}">
+          <i data-lucide="users"></i><span>账号管理</span>
+        </a>
+        <a href="{{ base_path }}/tasks" class="nav-item {% if active == 'tasks' %}active{% endif %}">
+          <i data-lucide="calendar-clock"></i><span>任务管理</span>
+        </a>
+        <a href="{{ base_path }}/openclaw" class="nav-item {% if active == 'openclaw' %}active{% endif %}">
+          <i data-lucide="bot-message-square"></i><span>OpenClaw</span>
+        </a>
+        <a href="{{ base_path }}/runs" class="nav-item {% if active == 'runs' %}active{% endif %}">
+          <i data-lucide="list-checks"></i><span>执行记录</span>
+        </a>
+        <a href="{{ base_path }}/system" class="nav-item {% if active == 'system' %}active{% endif %}">
+          <i data-lucide="settings-2"></i><span>系统</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="runner-state {% if runner_enabled %}online{% endif %}">
+          <span class="state-dot"></span>
+          执行器{% if runner_enabled %}已启用{% else %}未启用{% endif %}
+        </span>
+        <form action="{{ base_path }}/logout" method="post">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="nav-item nav-button" type="submit">
+            <i data-lucide="log-out"></i><span>退出</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" type="button" id="menuButton" title="打开导航" aria-label="打开导航">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="page-heading">
+          <span class="page-kicker">DAILY OPERATIONS</span>
+          <h1>{{ title }}</h1>
+          <span class="user-label">EDITOR · {{ user }}</span>
+        </div>
+        <div class="topbar-actions">{% block actions %}{% endblock %}</div>
+      </header>
+
+      <div class="content">
+        {% if message %}<div class="notice success" role="status">{{ message }}</div>{% endif %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="{{ url_for('static', path='/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

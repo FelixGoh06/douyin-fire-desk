@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="openclaw-status" aria-label="OpenClaw 状态">
+  <div class="openclaw-status-lead">
+    <span class="status {% if configured %}success{% else %}blocked{% endif %}">{% if configured %}已连接{% else %}未连接{% endif %}</span>
+    <h2>{% if configured %}回复通道正在工作{% else %}回复通道尚未配置{% endif %}</h2>
+    <p>{% if configured %}续火、晚间检查和 Cookie 健康检查会按各自时间执行，同一时间的结果合并为一条消息推送。{% else %}服务器配置 AGENT_API_TOKEN 并安装 OpenClaw Skill 后，才能启用晚间检查和自动回复。{% endif %}</p>
+  </div>
+  <dl class="openclaw-status-numbers">
+    <div><dt>每日续火回复</dt><dd>{{ stats.send_reports }}</dd></div>
+    <div><dt>晚间检查回复</dt><dd>{{ stats.night_reports }}</dd></div>
+    <div><dt>Cookie 健康回复</dt><dd>{{ stats.cookie_reports }}</dd></div>
+  </dl>
+</section>
+
+<section class="openclaw-rules openclaw-cookie-section" aria-labelledby="cookieRulesTitle">
+  <header class="section-header">
+    <div><h2 id="cookieRulesTitle">Cookie 健康检查</h2><span>COOKIE HEALTH / ACCOUNT SCHEDULE</span></div>
+  </header>
+  <div class="openclaw-rule-list">
+    {% for account in accounts %}
+    <form class="openclaw-rule openclaw-cookie-rule" method="post" action="{{ base_path }}/openclaw/accounts/{{ account.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <header class="openclaw-rule-heading">
+        <div>
+          <span class="rule-number">A{{ '%02d'|format(loop.index) }}</span>
+          <h3>{{ account.name }}</h3>
+          <p>最近检查 {{ account.last_login_check|datetime }}</p>
+        </div>
+        <span class="status {% if not account.has_cookie %}missing{% else %}{{ account.cookie_status }}{% endif %}">{% if not account.has_cookie %}未保存 Cookie{% else %}{{ {'valid':'Cookie 有效','expired':'Cookie 失效','unknown':'待检测','missing':'未保存 Cookie'}.get(account.cookie_status, account.cookie_status) }}{% endif %}</span>
+      </header>
+      <div class="openclaw-rule-options cookie-rule-options">
+        <label class="switch-control openclaw-rule-option {% if not configured %}is-disabled{% endif %}">
+          <span class="switch-copy">
+            <strong>每日健康检查</strong>
+            <small>自动打开抖音聊天页，验证 Cookie 和真实会话是否可用</small>
+          </span>
+          <input type="checkbox" name="cookie_check_enabled" data-toggle-control="cookie-check-time-{{ account.id }}" {% if account.cookie_check_enabled %}checked{% endif %} {% if not configured %}disabled{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+        <div class="openclaw-rule-option cookie-time-option toggle-dependent" data-toggle-target="cookie-check-time-{{ account.id }}">
+          <label class="field"><span>检查时间</span><input type="time" name="cookie_check_time" value="{{ account.cookie_check_time }}" required {% if not configured %}disabled{% endif %}></label>
+          <small>相同时间的多个账号会统一检查并汇总</small>
+        </div>
+        <label class="switch-control openclaw-rule-option {% if not configured %}is-disabled{% endif %}">
+          <span class="switch-copy">
+            <strong>Cookie 健康回复</strong>
+            <small>失效和未保存优先，全部账号检查完成后统一推送</small>
+          </span>
+          <input type="checkbox" name="cookie_report_enabled" {% if account.openclaw_cookie_report_enabled %}checked{% endif %} {% if not configured %}disabled{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </div>
+      <footer class="openclaw-rule-footer">
+        <span>关闭健康回复后仍可执行检查，但不会主动发送检查结果。</span>
+        <button class="button secondary" type="submit" {% if not configured %}disabled{% endif %}><i data-lucide="save"></i><span>保存检查设置</span></button>
+      </footer>
+    </form>
+    {% else %}
+    <div class="openclaw-empty"><strong>还没有账号</strong><span>添加账号并保存 Cookie 后即可设置每日健康检查。</span></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="openclaw-rules" aria-labelledby="openclawRulesTitle">
+  <header class="section-header">
+    <div><h2 id="openclawRulesTitle">回复任务</h2><span>REPORT SCHEDULE / FOLLOW TASK TIME</span></div>
+  </header>
+  <div class="openclaw-rule-list">
+    {% for task in tasks %}
+    <form class="openclaw-rule" method="post" action="{{ base_path }}/openclaw/tasks/{{ task.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <header class="openclaw-rule-heading">
+        <div>
+          <span class="rule-number">{{ '%02d'|format(loop.index) }}</span>
+          <h3>{{ task.name }}</h3>
+          <p>{{ task.account_name }} · {{ task.target_count }} 位好友</p>
+        </div>
+        <span class="status {% if task.enabled %}success{% else %}blocked{% endif %}">{% if task.enabled %}任务启用{% else %}任务停用{% endif %}</span>
+      </header>
+      <div class="openclaw-rule-options">
+        <label class="switch-control openclaw-rule-option {% if not configured %}is-disabled{% endif %}">
+          <span class="switch-copy">
+            <strong>每日续火结果</strong>
+            <small>每天 {{ task.send_time }} · 失败优先，全部完成后汇总推送</small>
+          </span>
+          <input type="checkbox" name="send_report_enabled" {% if task.openclaw_send_report_enabled %}checked{% endif %} {% if not configured %}disabled{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+        <label class="switch-control openclaw-rule-option {% if not configured or not task.night_check_enabled %}is-disabled{% endif %}">
+          <span class="switch-copy">
+            <strong>晚间检查结果</strong>
+            <small>{% if task.night_check_enabled %}每天 {{ task.night_check_time }} · 未续优先，检查完成后汇总推送{% else %}随任务关闭，请先在任务编辑页启用晚间检查{% endif %}</small>
+          </span>
+          <input type="checkbox" name="night_report_enabled" {% if task.openclaw_night_report_enabled %}checked{% endif %} {% if not configured or not task.night_check_enabled %}disabled{% endif %}>
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </div>
+      <footer class="openclaw-rule-footer">
+        <span>推送时间继承任务设置，不单独维护第二套时间。</span>
+        <button class="button secondary" type="submit" {% if not configured %}disabled{% endif %}><i data-lucide="save"></i><span>保存回复设置</span></button>
+      </footer>
+    </form>
+    {% else %}
+    <div class="openclaw-empty"><strong>还没有自动化任务</strong><span>创建任务后，这里会自动生成每日续火回复规则。</span></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

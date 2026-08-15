@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+</head>
+<body class="login-body">
+  <main class="login-shell">
+    <section class="login-panel">
+      <div class="login-issue"><span>FIRE DESK</span><span>ISSUE 01 · 2026</span></div>
+      <div class="login-grid">
+        <header class="login-cover">
+          <div class="cover-mark">火</div>
+          <p class="cover-kicker">DAILY OPERATIONS JOURNAL</p>
+          <h1>续火管理<br>后台</h1>
+          <p class="cover-caption">SCHEDULE · STATUS · STREAK</p>
+        </header>
+        <form method="post" action="{{ base_path }}/login" class="stack-form login-form">
+          <div class="form-number">SECURE ACCESS / 01</div>
+          {% if error %}<div class="notice danger" role="alert">{{ error }}</div>{% endif %}
+          <label class="field">
+            <span>账号</span>
+            <input name="username" autocomplete="username" required autofocus>
+          </label>
+          <label class="field">
+            <span>密码</span>
+            <input name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="button primary wide" type="submit">进入后台</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

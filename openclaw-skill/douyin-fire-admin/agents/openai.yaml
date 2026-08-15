@@ -1,0 +1,4 @@
+interface:
+  display_name: "抖音续火后台"
+  short_description: "提供续火任务、好友检查及 Cookie 健康状态管理"
+  default_prompt: "使用 $douyin-fire-admin 实时检查好友今天是否续火，并管理任务与 Cookie 健康状态。"

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<a class="button secondary" href="{{ base_path }}/accounts/new"><i data-lucide="user-plus"></i><span>添加账号</span></a>
+<a class="button primary" href="{{ base_path }}/tasks/new"><i data-lucide="plus"></i><span>创建任务</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="metric-strip" aria-label="运行概览">
+  <div class="metric"><span>账号</span><strong>{{ stats.accounts or 0 }}</strong><small>{{ stats.enabled_accounts or 0 }} 个启用</small></div>
+  <div class="metric"><span>自动任务</span><strong>{{ stats.tasks or 0 }}</strong><small>{{ stats.enabled_tasks or 0 }} 个启用</small></div>
+  <div class="metric"><span>目标好友</span><strong>{{ stats.targets or 0 }}</strong><small>分配到具体任务</small></div>
+  <div class="metric"><span>今日任务</span><strong>{{ stats.today_runs or 0 }}</strong><small>{{ stats.today_failures or 0 }} 个异常</small></div>
+</section>
+
+<section class="panel">
+  <div class="section-header">
+    <div><h2>账号状态</h2><span>{{ accounts|length }} 个账号</span></div>
+    <a class="text-link" href="{{ base_path }}/accounts">全部账号</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>账号</th><th>登录</th><th>Cookie</th><th>任务数</th><th>最近任务</th><th></th></tr></thead>
+      <tbody>
+      {% for account in accounts %}
+        <tr>
+          <td><a class="primary-link" href="{{ base_path }}/accounts/{{ account.id }}">{{ account.name }}</a>{% if not account.enabled %}<span class="muted-inline">已停用</span>{% endif %}</td>
+          <td><span class="status {{ account.login_status }}">{{ {'valid':'有效','expired':'失效','unknown':'未知'}.get(account.login_status, account.login_status) }}</span></td>
+          <td><span class="status {{ account.cookie_status }}">{{ {'valid':'有效','expired':'失效','unknown':'待检测','missing':'未保存'}.get(account.cookie_status, account.cookie_status) }}</span></td>
+          <td>{{ account.task_count }}</td>
+          <td><span class="status {{ account.last_run_status or 'unknown' }}">{{ account.last_run_status or '无记录' }}</span></td>
+          <td class="actions-cell"><a class="icon-button" href="{{ base_path }}/accounts/{{ account.id }}" title="查看账号" aria-label="查看账号"><i data-lucide="chevron-right"></i></a></td>
+        </tr>
+      {% else %}
+        <tr><td class="empty-row" colspan="6">还没有账号</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-header">
+    <div><h2>最近执行</h2><span>登录检测、发送与晚间检查</span></div>
+    <a class="text-link" href="{{ base_path }}/runs">全部记录</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>任务</th><th>账号</th><th>状态</th><th>时间</th><th>结果</th></tr></thead>
+      <tbody>
+      {% for run in recent_runs %}
+        <tr>
+          <td>#{{ run.id }} · {{ run.automation_task_name or {'login_check':'账号检测'}.get(run.task_type, run.task_type) }}</td>
+          <td>{{ run.account_name or '-' }}</td>
+          <td><span class="status {{ run.status }}">{{ run.status }}</span></td>
+          <td>{{ run.created_at|datetime }}</td>
+          <td class="summary-cell">{{ run.summary or '-' }}</td>
+        </tr>
+      {% else %}
+        <tr><td class="empty-row" colspan="5">暂无任务记录</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

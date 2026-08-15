@@ -1,0 +1,12 @@
+[Unit]
+Description=Deliver Douyin Fire Desk notifications through OpenClaw
+After=network-online.target douyin-fire-desk.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__OPENCLAW_USER__
+Environment=HOME=__OPENCLAW_HOME__
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=-/etc/douyin-fire-desk-openclaw.env
+ExecStart=/usr/bin/python3 __SKILL_DIR__/scripts/notify_openclaw.py

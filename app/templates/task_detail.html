@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<button class="button secondary" type="button" data-task-log-open data-task-name="{{ task.name }}" data-task-log-url="{{ base_path }}/api/tasks/{{ task.id }}/logs"><i data-lucide="scroll-text"></i><span>实时日志</span></button>
+<a class="button secondary" href="{{ base_path }}/tasks/{{ task.id }}/edit"><i data-lucide="pencil"></i><span>编辑任务</span></a>
+<form method="post" action="{{ base_path }}/tasks/{{ task.id }}/run/night_check" data-task-run data-task-name="{{ task.name }}" data-task-log-url="{{ base_path }}/api/tasks/{{ task.id }}/logs"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button secondary" type="submit"><i data-lucide="scan-search"></i><span>检查火花</span></button></form>
+<form method="post" action="{{ base_path }}/tasks/{{ task.id }}/run/send" data-task-run data-task-name="{{ task.name }}" data-task-log-url="{{ base_path }}/api/tasks/{{ task.id }}/logs"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="button primary" type="submit"><i data-lucide="play"></i><span>立即执行</span></button></form>
+{% endblock %}
+
+{% block content %}
+<section class="task-summary" aria-label="任务摘要">
+  <div class="task-summary-intro">
+    <span class="status {% if task.enabled %}success{% else %}blocked{% endif %}">{% if task.enabled %}调度中{% else %}已停用{% endif %}</span>
+    <p>每天 <strong>{{ task.send_time }}</strong> 使用账号 <a class="primary-link" href="{{ base_path }}/accounts/{{ task.account_id }}">{{ task.account_name }}</a>，向 <strong>{{ targets|selectattr('enabled')|list|length }}</strong> 位好友发送消息。</p>
+  </div>
+  <dl class="task-summary-grid">
+    <div><dt>下次发送</dt><dd>{{ next_jobs.send|default('-')|datetime }}</dd></div>
+    <div><dt>晚间检查</dt><dd>{% if task.night_check_enabled %}{{ task.night_check_time }}{% else %}未开启{% endif %}</dd></div>
+    <div><dt>消息模板</dt><dd>{{ task.message_template }}</dd></div>
+    <div><dt>账号状态</dt><dd class="status-text {{ task.login_status }}">{{ {'valid':'登录有效','expired':'登录失效','unknown':'尚未检测'}.get(task.login_status, task.login_status) }}</dd></div>
+  </dl>
+</section>
+
+<section class="task-workspace" data-tabs>
+  <div class="task-tabs" role="tablist" aria-label="任务详情视图">
+    <button class="task-tab active" type="button" role="tab" aria-selected="true" data-tab="targets">
+      <i data-lucide="users"></i><span>好友配置</span><span class="tab-count">{{ targets|length }}</span>
+    </button>
+    <button class="task-tab" type="button" role="tab" aria-selected="false" data-tab="runs">
+      <i data-lucide="history"></i><span>执行记录</span><span class="tab-count">{{ runs|length }}</span>
+    </button>
+  </div>
+
+  <div class="task-tab-panel active" role="tabpanel" data-tab-panel="targets">
+    <div class="workspace-header">
+      <div><h2>目标好友</h2><p>任务只处理这里启用的昵称，昵称必须与抖音当前显示一致。</p></div>
+      <button class="button primary" type="button" data-modal-open="targetModal"><i data-lucide="user-plus"></i><span>添加好友</span></button>
+    </div>
+    <div class="table-wrap">
+      <table class="target-table">
+        <thead><tr><th>好友</th><th>状态</th><th>火花</th><th>对方续火</th><th>发送内容</th><th></th></tr></thead>
+        <tbody>
+        {% for target in targets %}
+        <tr>
+          <td><strong>{{ target.nickname }}</strong><small class="cell-sub mono-cell">{{ target.douyin_user_id or '未绑定用户 ID' }}</small></td>
+          <td><span class="status {% if target.enabled %}success{% else %}blocked{% endif %}">{% if target.enabled %}启用{% else %}停用{% endif %}</span></td>
+          <td><strong>{{ target.last_fire_days if target.last_fire_days is not none else '-' }}</strong><small class="cell-sub">天</small></td>
+          <td><span class="status {{ target.renewal_status }}">{{ {'renewed':'已续','not_renewed':'未续','unknown':'未检测'}.get(target.renewal_status, target.renewal_status) }}</span><small class="cell-sub">{{ target.last_counterpart_at|datetime }}</small></td>
+          <td class="summary-cell">{{ target.message_template or '使用任务模板' }}</td>
+          <td class="actions-cell">
+            <form method="post" action="{{ base_path }}/task-targets/{{ target.id }}/toggle"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="icon-button" type="submit" title="切换状态" aria-label="切换目标状态"><i data-lucide="power"></i></button></form>
+            <form method="post" action="{{ base_path }}/task-targets/{{ target.id }}/delete" data-confirm="确定删除这个目标？"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="icon-button danger-icon" type="submit" title="删除目标" aria-label="删除目标"><i data-lucide="trash-2"></i></button></form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-row"><strong>还没有目标好友</strong><small>点击右上角“添加好友”开始配置</small></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="task-tab-panel" role="tabpanel" data-tab-panel="runs" hidden>
+    <div class="workspace-header">
+      <div><h2>最近执行</h2><p>这里只显示当前任务的最近 20 条记录。</p></div>
+      <a class="text-link" href="{{ base_path }}/runs">查看全部记录</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>类型</th><th>来源</th><th>状态</th><th>开始时间</th><th>结果</th></tr></thead>
+        <tbody>
+        {% for run in runs %}
+        <tr><td>#{{ run.id }}</td><td>{{ {'send':'发送','night_check':'晚间检查'}.get(run.task_type, run.task_type) }}</td><td>{{ run.source }}</td><td><span class="status {{ run.status }}">{{ run.status }}</span></td><td>{{ run.started_at|datetime }}</td><td class="summary-cell">{{ run.summary or '-' }}</td></tr>
+        {% else %}<tr><td colspan="6" class="empty-row"><strong>暂无执行记录</strong><small>点击页面右上角“立即执行”可手动运行一次</small></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="task-footer-actions">
+  <form method="post" action="{{ base_path }}/tasks/{{ task.id }}/delete" data-confirm="确定删除任务及其全部好友配置？">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="quiet-danger" type="submit"><i data-lucide="trash-2"></i><span>删除这个任务</span></button>
+  </form>
+</div>
+
+<dialog class="modal-dialog" id="targetModal" aria-labelledby="targetModalTitle">
+  <form method="post" action="{{ base_path }}/tasks/{{ task.id }}/targets">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="modal-header">
+      <div><span class="page-kicker">TARGET PROFILE</span><h2 id="targetModalTitle">添加目标好友</h2></div>
+      <button class="icon-button" type="button" data-modal-close title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <label class="field"><span>好友昵称</span><input name="nickname" placeholder="必须与抖音当前昵称完全一致" required autofocus></label>
+      <label class="field"><span>用户 ID（可选）</span><input name="douyin_user_id" placeholder="绑定后可辅助处理好友改名"></label>
+      <label class="field"><span>专属消息（可选）</span><textarea name="message_template" rows="4" placeholder="留空则使用任务消息模板：{{ task.message_template }}"></textarea></label>
+      <label class="toggle-field"><input type="checkbox" name="enabled" checked><span>添加后立即启用</span></label>
+    </div>
+    <div class="modal-footer">
+      <button class="button secondary" type="button" data-modal-close>取消</button>
+      <button class="button primary" type="submit"><i data-lucide="plus"></i><span>添加好友</span></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal-dialog task-log-dialog" id="taskLogDialog" aria-labelledby="taskLogTitle">
+  <div class="modal-header">
+    <div><span class="page-kicker">LIVE TASK OUTPUT</span><h2 id="taskLogTitle">任务执行日志</h2></div>
+    <button class="icon-button" type="button" data-modal-close title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+  </div>
+  <div class="task-log-body">
+    <div class="task-log-overview">
+      <span id="taskLogStatus" class="status unknown">等待读取</span>
+      <strong id="taskLogSummary">正在连接任务日志…</strong>
+      <small id="taskLogMeta">每 2 秒自动刷新</small>
+    </div>
+    <div class="task-log-section"><span>标准输出</span><pre id="taskLogOutput" class="task-log-output" aria-live="polite"></pre></div>
+  </div>
+  <div class="modal-footer"><button class="button secondary" type="button" data-modal-close>关闭</button></div>
+</dialog>
+{% endblock %}

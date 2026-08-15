@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if runtime.default_password or runtime.default_secret %}<div class="notice danger">后台仍在使用默认安全配置</div>{% endif %}
+<section class="panel">
+  <div class="section-header"><div><h2>运行环境</h2><span>当前服务配置</span></div></div>
+  <dl class="definition-grid">
+    <div><dt>浏览器执行器</dt><dd><span class="status {% if runtime.runner_enabled %}success{% else %}blocked{% endif %}">{% if runtime.runner_enabled %}已启用{% else %}未启用{% endif %}</span></dd></div>
+    <div><dt>浏览器路径</dt><dd>{{ runtime.browser_bin }}</dd></div>
+    <div><dt>Xvfb</dt><dd>{% if runtime.use_xvfb %}启用{% else %}关闭{% endif %}</dd></div>
+    <div><dt>回调限制</dt><dd>{% if runtime.callback_loopback %}仅本机{% else %}允许远程{% endif %}</dd></div>
+    <div><dt>调度时区</dt><dd>{{ runtime.timezone }}</dd></div>
+    <div><dt>数据库</dt><dd class="path-cell">{{ runtime.database_path }}</dd></div>
+    <div><dt>OpenClaw</dt><dd><span class="status {% if runtime.openclaw_configured %}success{% else %}blocked{% endif %}">{% if runtime.openclaw_configured %}API 已授权{% else %}未配置令牌{% endif %}</span></dd></div>
+  </dl>
+</section>
+
+<section class="panel">
+  <div class="section-header"><div><h2>事件日志</h2><span>最近 100 条</span></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>时间</th><th>账号</th><th>级别</th><th>事件</th><th>内容</th></tr></thead>
+      <tbody>
+      {% for event in events %}
+      <tr><td>{{ event.created_at|datetime }}</td><td>{{ event.account_name or '-' }}</td><td><span class="status {{ event.severity }}">{{ event.severity }}</span></td><td>{{ event.event_type }}</td><td class="summary-cell">{{ event.message }}</td></tr>
+      {% else %}<tr><td colspan="5" class="empty-row">暂无事件</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

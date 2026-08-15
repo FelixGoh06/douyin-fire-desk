@@ -1,0 +1,25 @@
+# Runtime secrets and data
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+.notification-state.json
+
+# Python and Playwright
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.playwright/
+playwright-report/
+test-results/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
