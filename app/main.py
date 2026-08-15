@@ -17,11 +17,20 @@ from .cookies import CookieError, encrypt_cookie_input
 from .db import connect, create_event, execute, fetch_all, fetch_one, init_db, now_iso
 from .runner import runner
 from .scheduler import schedule_manager
-from .security import create_session_token, csrf_token, read_session_token, verify_csrf, verify_password
+from .security import (
+    PasswordUpdateError,
+    create_session_token,
+    csrf_token,
+    read_session_token,
+    update_admin_password,
+    verify_csrf,
+    verify_password,
+)
 from .openclaw_api import router as openclaw_router
 
 
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+ADMIN_PASSWORD_RE = re.compile(r"^[A-Za-z0-9!%+,\-./:=?@^_~]{12,128}$")
 SESSION_COOKIE = "douyin_admin_session"
 
 
@@ -94,6 +103,13 @@ def redirect(path: str, message: str | None = None) -> RedirectResponse:
         separator = "&" if "?" in path else "?"
         path = f"{path}{separator}message={quote(message)}"
     return RedirectResponse(f"{settings.base_path}{path}", status_code=303)
+
+
+def redirect_error(path: str, error: str) -> RedirectResponse:
+    from urllib.parse import quote
+
+    separator = "&" if "?" in path else "?"
+    return RedirectResponse(f"{settings.base_path}{path}{separator}error={quote(error)}", status_code=303)
 
 
 def validate_time(value: str, field_name: str) -> str:
@@ -1024,7 +1040,7 @@ def openclaw_task_update(
 
 
 @app.get("/system", response_class=HTMLResponse)
-def system_page(request: Request, message: str = ""):
+def system_page(request: Request, message: str = "", error: str = ""):
     recent_events = fetch_all(
         """
         SELECT e.*, a.name AS account_name FROM events e
@@ -1052,8 +1068,35 @@ def system_page(request: Request, message: str = ""):
             events=recent_events,
             runtime=runtime,
             message=message,
+            error=error,
         ),
     )
+
+
+@app.post("/system/password")
+def system_password_update(
+    request: Request,
+    csrf: str = Form(...),
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    require_user(request)
+    require_csrf(request, csrf)
+    if not verify_password(current_password):
+        return redirect_error("/system", "当前密码不正确")
+    if new_password != confirm_password:
+        return redirect_error("/system", "两次输入的新密码不一致")
+    if not ADMIN_PASSWORD_RE.fullmatch(new_password):
+        return redirect_error("/system", "新密码需为 12-128 位，并仅使用字母、数字或常见英文符号")
+    try:
+        update_admin_password(new_password)
+    except PasswordUpdateError as exc:
+        return redirect_error("/system", str(exc))
+    create_event("admin_password_updated", "管理员密码已更新，服务正在重启", severity="warning")
+    response = redirect("/login", "密码已更新，请使用新密码重新登录")
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 @app.post("/done")

@@ -63,7 +63,7 @@ esac
 say "Installing required system packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y ca-certificates curl git nginx openssl python3 python3-pip python3-venv rsync xvfb
+apt-get install -y ca-certificates curl git nginx openssl python3 python3-pip python3-venv rsync sudo xvfb
 
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
@@ -112,6 +112,7 @@ PLAYWRIGHT_BROWSERS_PATH=${APP_DIR}/.playwright
 USE_XVFB=1
 CALLBACK_ONLY_LOOPBACK=1
 AGENT_API_TOKEN=${agent_token}
+ADMIN_PASSWORD_UPDATE_COMMAND=/usr/local/lib/douyin-fire-desk/update-admin-password
 EOF
   chmod 0600 "$ENV_FILE"
   printf 'OPENCLAW_BASE_URL=http://127.0.0.1:7788\nAGENT_API_TOKEN=%s\n' "$agent_token" > "$AGENT_ENV_FILE"
@@ -122,12 +123,23 @@ else
   say "Keeping existing configuration at ${ENV_FILE}"
 fi
 
+install -d -m 0755 /usr/local/lib/douyin-fire-desk
+install -m 0700 "$APP_DIR/deploy/update-admin-password.py" /usr/local/lib/douyin-fire-desk/update-admin-password
+printf '%s ALL=(root) NOPASSWD: /usr/local/lib/douyin-fire-desk/update-admin-password\n' "$SERVICE_USER" > /etc/sudoers.d/douyin-fire-desk-password
+chmod 0440 /etc/sudoers.d/douyin-fire-desk-password
+visudo -cf /etc/sudoers.d/douyin-fire-desk-password
+
 if [[ ! -f "$AGENT_ENV_FILE" ]]; then
   agent_token="$(grep -m1 '^AGENT_API_TOKEN=' "$ENV_FILE" | cut -d= -f2- || true)"
   [[ -n "$agent_token" ]] || fail "AGENT_API_TOKEN is missing from ${ENV_FILE}"
   printf 'OPENCLAW_BASE_URL=http://127.0.0.1:7788\nAGENT_API_TOKEN=%s\n' "$agent_token" > "$AGENT_ENV_FILE"
   chown root:"$AGENT_GROUP" "$AGENT_ENV_FILE"
   chmod 0640 "$AGENT_ENV_FILE"
+fi
+
+if ! grep -q '^ADMIN_PASSWORD_UPDATE_COMMAND=' "$ENV_FILE"; then
+  printf 'ADMIN_PASSWORD_UPDATE_COMMAND=/usr/local/lib/douyin-fire-desk/update-admin-password\n' >> "$ENV_FILE"
+  chmod 0600 "$ENV_FILE"
 fi
 
 install -m 0644 "$APP_DIR/deploy/douyin-fire-desk.service" "/etc/systemd/system/${APP_NAME}.service"

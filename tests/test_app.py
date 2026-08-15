@@ -639,3 +639,41 @@ def test_detects_counterpart_renewal_from_today_timeline():
         "https://lf3-static.bytednsdoc.com/flame_icon/normal/gray_normal.png",
         result["renewal_status"],
     ) == "not_renewed"
+
+
+def test_admin_password_change_requires_current_password_and_logs_out(monkeypatch):
+    updated_passwords: list[str] = []
+    monkeypatch.setattr(main_module, "update_admin_password", updated_passwords.append)
+    with TestClient(app) as client:
+        client.post("/login", data={"username": "admin", "password": "test-password"})
+        token = csrf_from(client.get("/system").text)
+        changed = client.post(
+            "/system/password",
+            data={
+                "csrf": token,
+                "current_password": "test-password",
+                "new_password": "NewPassword2026!",
+                "confirm_password": "NewPassword2026!",
+            },
+            follow_redirects=False,
+        )
+        assert changed.status_code == 303
+        assert changed.headers["location"].startswith("/login?message=")
+        assert updated_passwords == ["NewPassword2026!"]
+        assert "douyin_admin_session=" in changed.headers["set-cookie"]
+
+        client.post("/login", data={"username": "admin", "password": "test-password"})
+        token = csrf_from(client.get("/system").text)
+        rejected = client.post(
+            "/system/password",
+            data={
+                "csrf": token,
+                "current_password": "wrong-password",
+                "new_password": "OtherPassword2026!",
+                "confirm_password": "OtherPassword2026!",
+            },
+            follow_redirects=False,
+        )
+        assert rejected.status_code == 303
+        assert "/system?error=" in rejected.headers["location"]
+        assert updated_passwords == ["NewPassword2026!"]

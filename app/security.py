@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+import subprocess
 import time
 
 from .config import settings
@@ -12,8 +13,31 @@ from .config import settings
 SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 
 
+class PasswordUpdateError(RuntimeError):
+    """Raised when the narrowly scoped privileged password helper fails."""
+
+
 def verify_password(password: str) -> bool:
     return hmac.compare_digest(password.encode("utf-8"), settings.admin_password.encode("utf-8"))
+
+
+def update_admin_password(password: str) -> None:
+    command = settings.admin_password_update_command.strip()
+    if not command:
+        raise PasswordUpdateError("密码修改服务尚未配置")
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", command],
+            input=f"{password}\n",
+            text=True,
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise PasswordUpdateError("密码修改服务不可用") from exc
+    if result.returncode != 0:
+        raise PasswordUpdateError("密码修改失败，请检查系统服务权限")
 
 
 def create_session_token(username: str) -> str:
@@ -58,4 +82,3 @@ def verify_csrf(session_token: str | None, submitted: str | None) -> bool:
     if not session_token or not submitted:
         return False
     return hmac.compare_digest(csrf_token(session_token), submitted)
-

@@ -20,6 +20,10 @@
 - 在云安全组中只放行你实际使用的端口；可进一步限制为自己的固定 IP。
 - 仅 IP 访问也应使用强管理员密码。长期使用建议配域名、HTTPS 和 `SESSION_SECURE=1`。
 
+## 管理员密码修改
+
+系统页面修改密码时必须提供当前密码和有效 CSRF Token。Web 服务本身不能写入完整环境文件；安装器只允许 `douyin-fire` 系统用户经由固定的 `/usr/local/lib/douyin-fire-desk/update-admin-password` helper 更新 `ADMIN_PASSWORD`，随后由 helper 延迟重启服务。新密码要求 12-128 位，使用字母、数字和常见英文符号。
+
 ## 备份
 
 停服务后再备份，且只将备份保存到受信任的加密位置：

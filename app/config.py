@@ -34,6 +34,7 @@ class Settings:
     use_xvfb: bool = _bool_env("USE_XVFB", True)
     callback_only_loopback: bool = _bool_env("CALLBACK_ONLY_LOOPBACK", True)
     agent_api_token: str = os.getenv("AGENT_API_TOKEN", "")
+    admin_password_update_command: str = os.getenv("ADMIN_PASSWORD_UPDATE_COMMAND", "")
     timezone: str = os.getenv("APP_TIMEZONE", "Asia/Shanghai")
     base_path: str = os.getenv("BASE_PATH", "").rstrip("/")
 

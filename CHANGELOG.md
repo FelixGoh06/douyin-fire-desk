@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.1 - 2026-08-15
+
+- Added the System-page administrator password change flow with current-password verification, CSRF protection, format validation, automatic logout, and controlled service restart.
+- Added a narrowly scoped root helper and sudo rule installed by `install.sh`; the web process cannot write the full server environment file directly.
+
 ## v1.0.0 - 2026-08-15
 
 - First open-source release of Douyin Fire Desk.
