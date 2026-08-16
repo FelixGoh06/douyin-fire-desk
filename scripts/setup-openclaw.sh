@@ -227,6 +227,12 @@ discover_wechat_recipient() {
   pairing_output="$(run_as_openclaw_timeout 12s "$OPENCLAW_COMMAND" pairing list openclaw-weixin 2>&1 || true)"
   candidate="$(printf '%s\n' "$pairing_output" | grep -Eo '[[:alnum:]_.-]+@im\.wechat' | head -n 1 || true)"
   code="$(printf '%s\n' "$pairing_output" | grep -Eo '[A-Z2-9]{8}' | head -n 1 || true)"
+  if [[ -z "$candidate" ]]; then
+    # Recent OpenClaw WeChat plugin versions directly accept a private message
+    # without creating a `pairing list` entry. Its structured log still records
+    # the actual sender, which is the notification recipient we need here.
+    candidate="$(tail -n 500 /tmp/openclaw/openclaw-*.log 2>/dev/null | grep -oE 'inbound message: from=[^[:space:]]+@im\.wechat' | sed 's/^inbound message: from=//' | tail -n 1 || true)"
+  fi
   [[ -n "$candidate" ]] || return 1
   if [[ -n "$code" ]]; then
     run_as_openclaw "$OPENCLAW_COMMAND" pairing approve openclaw-weixin "$code" --notify >/dev/null 2>&1 || true
@@ -313,6 +319,7 @@ if [[ "$WITH_WECHAT" -eq 1 ]]; then
     note "请使用接收通知的微信号，向刚连接的机器人微信号发送任意私聊消息。"
     note "正在等待接收号配对请求，最长 3 分钟；不需要在终端输入任何内容。"
     if wait_for_wechat_recipient; then
+      target="$NOTIFY_TARGET"
       note "微信接收号已自动完成配对。"
     else
       note "暂未发现接收号。Skill 可以正常使用，但自动汇报会保持关闭；请让接收号发消息后重新运行此脚本。"
