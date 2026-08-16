@@ -8,6 +8,7 @@ AGENT_ENV_FILE="/etc/douyin-fire-desk-agent.env"
 AGENT_GROUP="douyin-fire-agent"
 OPENCLAW_ENV_FILE="/etc/douyin-fire-desk-openclaw.env"
 SERVICE_NAME="douyin-fire-openclaw-notify"
+GATEWAY_SERVICE_NAME="douyin-fire-openclaw-gateway"
 RUNTIME_DIR="/var/lib/douyin-fire-desk/openclaw-runtime"
 LOCK_FILE="/run/lock/douyin-fire-desk-openclaw-setup.lock"
 INSTALL_OPENCLAW=0
@@ -59,18 +60,33 @@ id "$OPENCLAW_USER" >/dev/null 2>&1 || fail "OpenClaw 用户不存在：$OPENCLA
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"
 [[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME" ]] || fail "无法找到用户 $OPENCLAW_USER 的主目录。"
 
-systemd_available() {
-  [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 && systemctl show-environment >/dev/null 2>&1
-}
-
 run_as_openclaw() {
-  runuser -u "$OPENCLAW_USER" -- env HOME="$OPENCLAW_HOME" PATH="$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$@"
+  local uid runtime
+  local -a environment
+  uid="$(id -u "$OPENCLAW_USER")"
+  runtime="/run/user/$uid"
+  environment=("HOME=$OPENCLAW_HOME" "PATH=$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+  if [[ -S "$runtime/bus" ]]; then
+    environment+=("XDG_RUNTIME_DIR=$runtime" "DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime/bus")
+  fi
+  runuser -u "$OPENCLAW_USER" -- env "${environment[@]}" "$@"
 }
 
 run_as_openclaw_timeout() {
-  local duration="$1"
+  local duration="$1" uid runtime
+  local -a environment
   shift
-  timeout "$duration" runuser -u "$OPENCLAW_USER" -- env HOME="$OPENCLAW_HOME" PATH="$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$@"
+  uid="$(id -u "$OPENCLAW_USER")"
+  runtime="/run/user/$uid"
+  environment=("HOME=$OPENCLAW_HOME" "PATH=$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+  if [[ -S "$runtime/bus" ]]; then
+    environment+=("XDG_RUNTIME_DIR=$runtime" "DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime/bus")
+  fi
+  timeout "$duration" runuser -u "$OPENCLAW_USER" -- env "${environment[@]}" "$@"
+}
+
+systemd_available() {
+  [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 && systemctl show-environment >/dev/null 2>&1
 }
 
 find_openclaw() {
@@ -84,7 +100,7 @@ find_openclaw() {
 gateway_status() {
   local status
   status="$(run_as_openclaw "$OPENCLAW_COMMAND" gateway status 2>&1 || true)"
-  printf '%s\n' "$status" | grep -q 'Runtime: running' && printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
+  printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
 }
 
 wechat_channel_connected() {
@@ -99,7 +115,28 @@ wechat_plugin_installed() {
 
 install_gateway_service() {
   if systemd_available; then
-    run_as_openclaw "$OPENCLAW_COMMAND" gateway install >/dev/null 2>&1 || true
+    run_as_openclaw systemctl --user disable --now openclaw-gateway.service >/dev/null 2>&1 || true
+    cat > "/etc/systemd/system/${GATEWAY_SERVICE_NAME}.service" <<EOF
+[Unit]
+Description=Douyin Fire Desk OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${OPENCLAW_USER}
+Environment=HOME=${OPENCLAW_HOME}
+Environment=PATH=${OPENCLAW_HOME}/.local/share/pnpm:${OPENCLAW_HOME}/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${OPENCLAW_COMMAND} gateway
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable --now "${GATEWAY_SERVICE_NAME}.service"
   fi
 }
 
@@ -119,14 +156,13 @@ start_container_gateway() {
 ensure_gateway() {
   gateway_status && return 0
   if systemd_available; then
-    say "正在启动受 systemd 管理的 OpenClaw Gateway"
+    say "正在启动受系统 systemd 管理的 OpenClaw Gateway"
     install_gateway_service
-    run_as_openclaw "$OPENCLAW_COMMAND" gateway start >/dev/null 2>&1 || true
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
     done
-    fail "Gateway 不可用。请执行：sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+    fail "Gateway 不可用。请执行：systemctl status ${GATEWAY_SERVICE_NAME}.service --no-pager"
   else
     start_container_gateway
   fi
@@ -135,12 +171,12 @@ ensure_gateway() {
 restart_gateway_after_channel_login() {
   if systemd_available; then
     say "微信登录完成，正在重载 Gateway"
-    run_as_openclaw "$OPENCLAW_COMMAND" gateway restart >/dev/null 2>&1 || true
+    systemctl restart "${GATEWAY_SERVICE_NAME}.service"
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
     done
-    fail "微信登录后 Gateway 未恢复。请执行：sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+    fail "微信登录后 Gateway 未恢复。请执行：systemctl status ${GATEWAY_SERVICE_NAME}.service --no-pager"
   else
     start_container_gateway
   fi
@@ -225,11 +261,7 @@ if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
   say "请配置模型服务商"
   note "只有模型服务商和 API Key 页面需要手动输入。请勿把 API Key 发到聊天记录中。"
   onboarding=(onboard --accept-risk --flow quickstart --skip-channels --skip-ui --skip-hooks --skip-search --skip-skills)
-  if systemd_available; then
-    onboarding+=(--install-daemon)
-  else
-    onboarding+=(--skip-daemon --skip-health)
-  fi
+  onboarding+=(--skip-daemon --skip-health)
   run_as_openclaw env OPENCLAW_LOCALE=zh-CN "$OPENCLAW_COMMAND" "${onboarding[@]}"
 fi
 

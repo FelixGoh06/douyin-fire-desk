@@ -3,6 +3,7 @@
 set -euo pipefail
 
 OPENCLAW_USER="${SUDO_USER:-${USER:-root}}"
+GATEWAY_SERVICE_NAME="douyin-fire-openclaw-gateway"
 case "${1:-}" in
   "") ;;
   -h|--help)
@@ -22,7 +23,19 @@ OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"
 [[ -d "$OPENCLAW_HOME" ]] || { printf '无法找到用户 %s 的主目录。\n' "$OPENCLAW_USER" >&2; exit 1; }
 
 run_as_openclaw() {
-  runuser -u "$OPENCLAW_USER" -- env HOME="$OPENCLAW_HOME" PATH="$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$@"
+  local uid runtime
+  local -a environment
+  uid="$(id -u "$OPENCLAW_USER")"
+  runtime="/run/user/$uid"
+  environment=("HOME=$OPENCLAW_HOME" "PATH=$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+  if [[ -S "$runtime/bus" ]]; then
+    environment+=("XDG_RUNTIME_DIR=$runtime" "DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime/bus")
+  fi
+  runuser -u "$OPENCLAW_USER" -- env "${environment[@]}" "$@"
+}
+
+systemd_available() {
+  [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 && systemctl show-environment >/dev/null 2>&1
 }
 
 find_openclaw() {
@@ -47,31 +60,48 @@ if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
   printf '\n==> 请配置模型服务商\n'
   printf '只有模型配置向导需要手动输入。\n'
   onboarding=(onboard --accept-risk --flow quickstart --skip-channels --skip-ui --skip-hooks --skip-search --skip-skills)
-  if [[ -d /run/systemd/system ]] && systemctl show-environment >/dev/null 2>&1; then
-    onboarding+=(--install-daemon)
-  else
-    onboarding+=(--skip-daemon --skip-health)
-  fi
+  onboarding+=(--skip-daemon --skip-health)
   run_as_openclaw env OPENCLAW_LOCALE=zh-CN "$OPENCLAW_COMMAND" "${onboarding[@]}"
 else
   printf '模型配置已存在，已跳过重复配置。\n'
 fi
 
-if [[ -d /run/systemd/system ]] && systemctl show-environment >/dev/null 2>&1; then
-  run_as_openclaw "$OPENCLAW_COMMAND" gateway install >/dev/null 2>&1 || true
-  run_as_openclaw "$OPENCLAW_COMMAND" gateway start >/dev/null 2>&1 || true
+if systemd_available; then
+  run_as_openclaw systemctl --user disable --now openclaw-gateway.service >/dev/null 2>&1 || true
+  cat > "/etc/systemd/system/${GATEWAY_SERVICE_NAME}.service" <<EOF
+[Unit]
+Description=Douyin Fire Desk OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${OPENCLAW_USER}
+Environment=HOME=${OPENCLAW_HOME}
+Environment=PATH=${OPENCLAW_HOME}/.local/share/pnpm:${OPENCLAW_HOME}/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${OPENCLAW_COMMAND} gateway
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now "${GATEWAY_SERVICE_NAME}.service"
 else
   run_as_openclaw bash -lc "nohup $(printf '%q' "$OPENCLAW_COMMAND") gateway >/tmp/openclaw-gateway.log 2>&1 &"
 fi
 
 for _ in 1 2 3 4 5 6; do
   sleep 5
-  if run_as_openclaw "$OPENCLAW_COMMAND" gateway status 2>&1 | grep -q 'Runtime: running'; then
+  status="$(run_as_openclaw "$OPENCLAW_COMMAND" gateway status 2>&1 || true)"
+  if printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'; then
     printf '\nOpenClaw Gateway 已正常运行。\n'
     run_as_openclaw "$OPENCLAW_COMMAND" gateway status
     exit 0
   fi
 done
 
-printf 'OpenClaw 已安装，但 Gateway 状态异常。请执行：sudo -u %s HOME=%s %s gateway status\n' "$OPENCLAW_USER" "$OPENCLAW_HOME" "$OPENCLAW_COMMAND" >&2
+printf 'OpenClaw 已安装，但 Gateway 状态异常。请执行：systemctl status %s.service --no-pager\n' "$GATEWAY_SERVICE_NAME" >&2
 exit 1

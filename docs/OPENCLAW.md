@@ -18,7 +18,7 @@ sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh --install-openclaw --w
 - 打开中文模型配置向导，并验证模型。
 - 安装 `douyin-fire-admin` Skill。
 - 安装腾讯 `@tencent-weixin/openclaw-weixin` 插件。
-- 启动 Gateway；没有 systemd 的容器使用受控 `nohup` 后台进程。
+- 启动 Gateway；普通服务器使用本项目的系统级 `douyin-fire-openclaw-gateway.service`，没有 systemd 的容器使用受控 `nohup` 后台进程。
 - 显示微信登录二维码。
 - 识别首个已配对接收微信号，将其设为通知接收者。
 - 启动每分钟的通知投递器。普通主机使用 systemd timer；容器使用后台循环。

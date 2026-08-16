@@ -59,8 +59,8 @@ sudo systemctl restart douyin-fire-desk.service nginx
 普通主机：
 
 ```bash
-openclaw gateway status
-openclaw gateway restart
+systemctl status douyin-fire-openclaw-gateway.service --no-pager
+sudo systemctl restart douyin-fire-openclaw-gateway.service
 ```
 
 Docker 容器没有 systemd 时，不要使用 `openclaw gateway install`。重新执行：

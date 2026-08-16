@@ -156,11 +156,18 @@ openclaw_available() {
 }
 
 run_openclaw() {
-  local user home command
+  local user home command uid runtime
+  local -a environment
   user="$(openclaw_user)"
   home="$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || true)"
   command="$(openclaw_command)"
-  runuser -u "$user" -- env HOME="$home" PATH="$home/.local/share/pnpm:$home/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$command" "$@"
+  environment=("HOME=$home" "PATH=$home/.local/share/pnpm:$home/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+  uid="$(id -u "$user")"
+  runtime="/run/user/$uid"
+  if [[ -S "$runtime/bus" ]]; then
+    environment+=("XDG_RUNTIME_DIR=$runtime" "DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime/bus")
+  fi
+  runuser -u "$user" -- env "${environment[@]}" "$command" "$@"
 }
 
 openclaw_configured() {
@@ -173,7 +180,7 @@ openclaw_gateway_healthy() {
   local status
   openclaw_available || return 1
   status="$(run_openclaw gateway status 2>&1 || true)"
-  printf '%s\n' "$status" | grep -q 'Runtime: running' && printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
+  printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
 }
 
 skill_installed() {
