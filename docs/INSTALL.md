@@ -27,6 +27,8 @@ curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bo
 
 脚本自动完成：系统依赖、Python、Playwright、Chromium、Nginx、后台服务、管理员密码、OpenClaw、抖音后台 Skill、腾讯微信插件、Gateway 和通知投递器。
 
+> 一键命令会自动把 OpenClaw 向导的键盘输入重新连接到当前终端。看到模型选择菜单后，直接使用方向键和 Enter；不要在该命令执行期间另开一个 Shell 再运行 `openclaw onboard`。
+
 安装过程中只需要你处理以下内容：
 
 1. **模型配置**：在 OpenClaw 菜单选择模型提供商，填写 API Key、Base URL 与模型 ID。自定义 OpenAI 兼容模型选择 `Custom Provider` -> `OpenAI-compatible`。

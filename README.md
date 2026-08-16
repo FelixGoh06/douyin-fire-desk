@@ -2,7 +2,7 @@
 
 **抖音火花运营台**。面向个人服务器的 Web 管理后台：集中保存账号 Cookie、按昵称维护好友、定时发送续火消息、晚间检查对方是否续火，并可通过 OpenClaw 汇总通知和操作后台。
 
-> Version: **v1.0.10** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
+> Version: **v1.0.11** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
 
 ## 这是什么
 

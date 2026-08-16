@@ -53,4 +53,9 @@ case "$SOURCE" in
 esac
 
 cd "$target"
+# `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. The
+# OpenClaw model wizard needs the caller's terminal for arrow keys and input.
+if [[ -r /dev/tty ]]; then
+  exec bash install.sh "${INSTALL_ARGS[@]}" </dev/tty
+fi
 exec bash install.sh "${INSTALL_ARGS[@]}"

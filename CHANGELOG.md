@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.11
+
+- Fixed interactive OpenClaw setup after the one-line `curl | sudo bash` command: the bootstrapper now reconnects the installer to `/dev/tty`, so model selection receives arrow-key and Enter input instead of exiting with an unsettled top-level-await warning.
+
 ## v1.0.10
 
 - The bundled OpenClaw onboarding now selects the recommended QuickStart flow automatically before opening model-provider configuration.
