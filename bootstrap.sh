@@ -30,12 +30,34 @@ case "${ID:-}" in debian|ubuntu) ;; *) printf '仅支持 Debian/Ubuntu 服务器
 
 [[ "$EUID" -eq 0 ]] || { printf '请以 root 运行启动脚本：curl ... | sudo bash\n' >&2; exit 1; }
 
+target="/root/${REPO_NAME}"
+
+open_menu() {
+  cd "$target"
+  # `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. Reconnect
+  # the interactive GONGYU menu to the caller's terminal before opening it.
+  # Some cloud terminal implementations expose /dev/tty without reporting it as
+  # readable to `[[ -r ]]`, so test opening it rather than inspecting permissions.
+  if { true </dev/tty; } 2>/dev/null; then
+    exec bash gongyu.sh </dev/tty
+  fi
+  printf '\nGONGYU 已准备就绪，但当前终端不支持交互输入。\n'
+  printf '请手动打开菜单：\n  cd %s && bash gongyu.sh\n' "$target"
+}
+
+if [[ -e "$target" ]]; then
+  if [[ ! -d "$target" || ! -f "$target/gongyu.sh" ]]; then
+    printf '目录已存在但不是有效项目目录：%s\n请更换目录名或处理该目录后重试。\n' "$target" >&2
+    exit 1
+  fi
+  printf '检测到已有项目目录：%s\n不重复下载，正在打开 GONGYU 脚本主菜单。\n' "$target"
+  open_menu
+  exit 0
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y ca-certificates curl git
-
-target="/root/${REPO_NAME}"
-[[ ! -e "$target" ]] || { printf '目录已存在：%s\n请在该目录更新后重新运行 gongyu.sh。\n' "$target" >&2; exit 1; }
 
 clone() {
   local url="$1"
@@ -48,13 +70,4 @@ case "$SOURCE" in
   auto) clone "$GITEE_URL" || { rm -rf "$target"; clone "$GITHUB_URL"; } ;;
 esac
 
-cd "$target"
-# `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. Reconnect
-# the interactive GONGYU menu to the caller's terminal before opening it.
-# Some cloud terminal implementations expose /dev/tty without reporting it as
-# readable to `[[ -r ]]`, so test opening it rather than inspecting permissions.
-if { true </dev/tty; } 2>/dev/null; then
-  exec bash gongyu.sh </dev/tty
-fi
-printf '\nGONGYU 已下载，但当前终端不支持交互输入。\n'
-printf '请手动打开菜单：\n  cd %s && bash gongyu.sh\n' "$target"
+open_menu

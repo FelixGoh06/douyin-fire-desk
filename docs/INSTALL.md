@@ -27,6 +27,8 @@ curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bo
 
 执行后会先进入 `GONGYU` 主菜单：选择 `1` 是完整的一键安装；选择 `2` 只安装 Web 管理后台。完整安装会自动完成系统依赖、Python、Playwright、Chromium、Nginx、后台服务、管理员密码、OpenClaw、抖音后台 Skill、腾讯微信插件、Gateway 和通知投递器。
 
+以后重复执行这条命令时，脚本会识别已有的 `/root/douyin-fire-desk`，不重复克隆或安装系统依赖，直接进入 `GONGYU` 主菜单。
+
 > 一键命令会自动把 OpenClaw 向导的键盘输入重新连接到当前终端。看到模型选择菜单后，直接使用方向键和 Enter；不要在该命令执行期间另开一个 Shell 再运行 `openclaw onboard`。
 
 选择完整安装后，只需要你处理以下内容：
