@@ -67,6 +67,12 @@ run_as_openclaw() {
   runuser -u "$OPENCLAW_USER" -- env HOME="$OPENCLAW_HOME" PATH="$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$@"
 }
 
+run_as_openclaw_timeout() {
+  local duration="$1"
+  shift
+  timeout "$duration" runuser -u "$OPENCLAW_USER" -- env HOME="$OPENCLAW_HOME" PATH="$OPENCLAW_HOME/.local/share/pnpm:$OPENCLAW_HOME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$@"
+}
+
 find_openclaw() {
   local candidate
   for candidate in "$(command -v openclaw 2>/dev/null || true)" "$OPENCLAW_HOME/.local/share/pnpm/openclaw" "$OPENCLAW_HOME/.npm-global/bin/openclaw"; do
@@ -76,7 +82,9 @@ find_openclaw() {
 }
 
 gateway_status() {
-  run_as_openclaw "$OPENCLAW_COMMAND" gateway status >/dev/null 2>&1
+  local status
+  status="$(run_as_openclaw "$OPENCLAW_COMMAND" gateway status 2>&1 || true)"
+  printf '%s\n' "$status" | grep -q 'Runtime: running' && printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
 }
 
 wechat_channel_connected() {
@@ -168,7 +176,7 @@ install_notification_runtime() {
 
 discover_wechat_recipient() {
   local pairing_output candidate code
-  pairing_output="$(run_as_openclaw "$OPENCLAW_COMMAND" pairing list openclaw-weixin 2>&1 || true)"
+  pairing_output="$(run_as_openclaw_timeout 12s "$OPENCLAW_COMMAND" pairing list openclaw-weixin 2>&1 || true)"
   candidate="$(printf '%s\n' "$pairing_output" | grep -Eo '[[:alnum:]_.-]+@im\.wechat' | head -n 1 || true)"
   code="$(printf '%s\n' "$pairing_output" | grep -Eo '[A-Z2-9]{8}' | head -n 1 || true)"
   [[ -n "$candidate" ]] || return 1

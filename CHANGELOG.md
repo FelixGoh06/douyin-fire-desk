@@ -7,6 +7,7 @@
 - Added missing-package checks, a standalone official OpenClaw runtime installer, and scoped OpenClaw-integration cleanup.
 - Improved cloud-terminal compatibility by reopening `/dev/tty` directly before showing the menu and printing a manual menu command when no interactive terminal is available.
 - Made terminal colors and screen clearing optional so cloud consoles without a usable `TERM` value still show the plain-text menu.
+- Fixed a false-positive Gateway health check: setup now requires a running process and a successful connectivity probe before continuing after WeChat login.
 
 ## v1.0.13
 

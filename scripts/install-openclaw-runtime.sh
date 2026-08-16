@@ -62,7 +62,7 @@ fi
 
 for _ in 1 2 3 4 5 6; do
   sleep 5
-  if run_as_openclaw "$OPENCLAW_COMMAND" gateway status >/dev/null 2>&1; then
+  if run_as_openclaw "$OPENCLAW_COMMAND" gateway status 2>&1 | grep -q 'Runtime: running'; then
     printf '\nOpenClaw Gateway is running.\n'
     run_as_openclaw "$OPENCLAW_COMMAND" gateway status
     exit 0
