@@ -74,6 +74,12 @@ gateway_status() {
   run_as_openclaw "$OPENCLAW_COMMAND" gateway status >/dev/null 2>&1
 }
 
+wechat_channel_connected() {
+  local status
+  status="$(run_as_openclaw "$OPENCLAW_COMMAND" channels status --probe 2>&1 || true)"
+  printf '%s\n' "$status" | grep -Eq '^[-[:space:]]*openclaw-weixin .*enabled, configured, running'
+}
+
 install_gateway_service() {
   if systemd_available; then
     run_as_openclaw "$OPENCLAW_COMMAND" gateway install >/dev/null 2>&1 || true
@@ -226,9 +232,13 @@ if [[ "$WITH_WECHAT" -eq 1 ]]; then
   run_as_openclaw npx -y @tencent-weixin/openclaw-weixin-cli install
   run_as_openclaw "$OPENCLAW_COMMAND" config set plugins.entries.openclaw-weixin.enabled true
   ensure_gateway
-  note "Scan the QR code with the dedicated OpenClaw WeChat account and confirm on the phone."
-  run_as_openclaw "$OPENCLAW_COMMAND" channels login --channel openclaw-weixin
-  restart_gateway_after_channel_login
+  if wechat_channel_connected; then
+    note "WeChat is already connected; skipping the QR login."
+  else
+    note "Scan the QR code with the dedicated OpenClaw WeChat account and confirm on the phone."
+    run_as_openclaw "$OPENCLAW_COMMAND" channels login --channel openclaw-weixin
+    restart_gateway_after_channel_login
+  fi
   channel="openclaw-weixin"
   if [[ -z "$target" && "$NON_INTERACTIVE" -eq 0 ]]; then
     note "From the receiving WeChat account, send any message to the account just connected."
