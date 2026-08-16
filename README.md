@@ -2,13 +2,15 @@
 
 **抖音火花运营台**。面向个人服务器的 Web 管理后台：集中保存账号 Cookie、按昵称维护好友、定时发送续火消息、晚间检查对方是否续火，并可通过 OpenClaw 汇总通知和操作后台。
 
-> Version: **v1.0.14** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
+> Version: **v1.0.14** | License: [MIT](LICENSE) | Runtime: 常见 systemd Linux 服务器
 
 ## 这是什么
 
 Douyin Fire Desk 将浏览器自动化、任务调度和通知集中到一台 Linux 服务器。后台不会上传 Cookie；Cookie 在服务器本地数据库中使用 Fernet 加密保存。Web 页面是日常操作入口，OpenClaw 是可选的对话式操作和通知入口。
 
-建议配置：**2 核 4 GB 内存**、20 GB 磁盘、Debian 12 或 Ubuntu 22.04/24.04。单账号日常运行通常远低于此配置；首次安装 Chromium 时会短暂占用更多磁盘和内存。
+建议配置：**2 核 4 GB 内存**、20 GB 磁盘。支持 Debian/Ubuntu，以及使用 `dnf`/`yum` 的 Rocky、AlmaLinux、RHEL、CentOS Stream、Fedora、openEuler。单账号日常运行通常远低于此配置；首次安装 Chromium 时会短暂占用更多磁盘和内存。
+
+安装器面向带 `systemd` 的常见云服务器；Alpine、Arch、SUSE 和无 systemd 的容器环境目前不在自动安装支持范围内。
 
 ## 功能清单
 
@@ -28,7 +30,7 @@ Douyin Fire Desk 将浏览器自动化、任务调度和通知集中到一台 Li
 
 ## 一条命令安装
 
-先在安全组/防火墙放行 TCP `8787`，然后用 **系统主机 SSH** 登录 Debian/Ubuntu 服务器。Web 后台安装依赖 systemd；不要在没有 systemd 的 Docker 容器终端直接运行这个主安装器。
+先在安全组/防火墙放行 TCP `8787`，然后用 **系统主机 SSH** 登录服务器。安装器支持 Debian/Ubuntu 和使用 `dnf`/`yum` 的 Rocky、AlmaLinux、RHEL、CentOS Stream、Fedora、openEuler；Web 后台依赖 systemd，不要在没有 systemd 的 Docker 容器终端直接运行主安装器。
 
 **中国大陆服务器（Gitee 优先，自动回退 GitHub）：**
 

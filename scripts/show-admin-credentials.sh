@@ -3,7 +3,11 @@
 set -euo pipefail
 
 ENV_FILE="/etc/douyin-fire-desk.env"
-NGINX_FILE="/etc/nginx/sites-enabled/douyin-fire-desk"
+NGINX_FILES=(
+  "/etc/nginx/sites-enabled/douyin-fire-desk"
+  "/etc/nginx/sites-available/douyin-fire-desk"
+  "/etc/nginx/conf.d/douyin-fire-desk.conf"
+)
 
 [[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 运行：sudo bash scripts/show-admin-credentials.sh\n' >&2; exit 1; }
 [[ -f "$ENV_FILE" ]] || { printf '未找到配置文件：%s\n' "$ENV_FILE" >&2; exit 1; }
@@ -37,7 +41,12 @@ detect_public_ipv4() {
 
 username="$(read_value ADMIN_USERNAME)"
 password="$(read_value ADMIN_PASSWORD)"
-port="$(awk '/^[[:space:]]*listen[[:space:]]+[0-9]+/{gsub(";", "", $2); print $2; exit}' "$NGINX_FILE" 2>/dev/null || true)"
+port=""
+for nginx_file in "${NGINX_FILES[@]}"; do
+  [[ -f "$nginx_file" ]] || continue
+  port="$(awk '/^[[:space:]]*listen[[:space:]]+[0-9]+/{gsub(";", "", $2); print $2; exit}' "$nginx_file" 2>/dev/null || true)"
+  [[ -n "$port" ]] && break
+done
 port="${port:-8787}"
 public_ip="$(detect_public_ipv4 || true)"
 local_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"

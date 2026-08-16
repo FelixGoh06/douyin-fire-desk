@@ -15,7 +15,7 @@ if [[ -f /var/lib/douyin-fire-desk/openclaw-runtime/gateway.pid ]]; then
   kill "$(cat /var/lib/douyin-fire-desk/openclaw-runtime/gateway.pid)" 2>/dev/null || true
 fi
 rm -f /etc/systemd/system/douyin-fire-openclaw-notify.service /etc/systemd/system/douyin-fire-openclaw-notify.timer /etc/systemd/system/douyin-fire-openclaw-gateway.service
-rm -f /etc/systemd/system/douyin-fire-desk.service /etc/nginx/sites-enabled/douyin-fire-desk /etc/nginx/sites-available/douyin-fire-desk
+rm -f /etc/systemd/system/douyin-fire-desk.service /etc/nginx/sites-enabled/douyin-fire-desk /etc/nginx/sites-available/douyin-fire-desk /etc/nginx/conf.d/douyin-fire-desk.conf
 systemctl daemon-reload
 systemctl reload nginx 2>/dev/null || true
 if [[ "$PURGE" -eq 1 ]]; then

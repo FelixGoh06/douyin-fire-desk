@@ -1,6 +1,8 @@
 # 傻瓜式安装
 
-这份流程适用于全新的 Debian 12、Ubuntu 22.04 或 Ubuntu 24.04 主机。推荐配置为 2 核、4 GB 内存、20 GB 磁盘；单账号日常占用较低，但首次下载 Chromium 会占用数 GB 磁盘。
+这份流程适用于全新的 Debian 12/13、Ubuntu 22.04/24.04、Rocky Linux 8/9、AlmaLinux 8/9、RHEL 8/9、CentOS Stream 9、Fedora 和 openEuler 主机。脚本会自动识别 `apt`、`dnf` 或 `yum`。推荐配置为 2 核、4 GB 内存、20 GB 磁盘；单账号日常占用较低，但首次下载 Chromium 会占用数 GB 磁盘。
+
+当前安装器面向带 `systemd` 的常见云服务器；Alpine、Arch、SUSE 与没有 `systemd` 的容器环境暂未纳入自动安装范围。
 
 ## 先准备
 
@@ -135,10 +137,17 @@ sudo bash /opt/douyin-fire-desk/scripts/doctor.sh
 - 只有 `127.0.0.1:7788`：应用内部正常，但 Nginx 公网入口没有启动。运行 `sudo systemctl restart nginx douyin-fire-desk.service` 后重试。
 - 使用 Docker：还需要在 Docker 主机映射 `8787:8787`；不要把 `7788` 映射公网。
 
-Ubuntu 启用 UFW 时：
+Ubuntu/Debian 启用 UFW 时：
 
 ```bash
 sudo ufw allow 8787/tcp
+```
+
+Rocky、AlmaLinux、RHEL、CentOS Stream、Fedora 或 openEuler 启用 firewalld 时：
+
+```bash
+sudo firewall-cmd --permanent --add-port=8787/tcp
+sudo firewall-cmd --reload
 ```
 
 ## 更新与卸载

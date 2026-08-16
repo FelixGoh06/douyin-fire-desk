@@ -64,13 +64,16 @@ ensure_root() {
 }
 
 ensure_supported_os() {
-  [[ -f /etc/os-release ]] || { error "仅支持 Debian/Ubuntu Linux 服务器。"; exit 1; }
-  # shellcheck disable=SC1091
-  . /etc/os-release
-  case "${ID:-}" in
-    debian|ubuntu) ;;
-    *) error "仅支持 Debian 和 Ubuntu。"; exit 1 ;;
-  esac
+  [[ -f /etc/os-release ]] || { error "无法识别 Linux 发行版。"; exit 1; }
+  [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 || {
+    error "Web 管理平台需要 systemd。请在服务器主机的 SSH 终端运行，不要在 Docker 容器终端中运行。"
+    exit 1
+  }
+  if command -v apt-get >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1 || command -v yum >/dev/null 2>&1; then
+    return
+  fi
+  error "暂不支持当前系统的包管理器。已支持 apt、dnf 和 yum 系统。"
+  exit 1
 }
 
 installed_project_dir() {
@@ -81,13 +84,19 @@ installed_project_dir() {
   fi
 }
 
+nginx_config_present() {
+  [[ -f "/etc/nginx/sites-available/douyin-fire-desk" || -f "/etc/nginx/conf.d/douyin-fire-desk.conf" ]]
+}
+
 project_is_installed() {
-  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" && -f "/etc/nginx/sites-available/douyin-fire-desk" ]] || return 1
+  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" ]] || return 1
+  nginx_config_present || return 1
   systemctl is-enabled --quiet douyin-fire-desk.service 2>/dev/null && systemctl is-active --quiet douyin-fire-desk.service 2>/dev/null
 }
 
 web_files_present() {
-  [[ -f "$ENV_FILE" || -d "$APP_DIR" || -f "/etc/systemd/system/douyin-fire-desk.service" || -f "/etc/nginx/sites-available/douyin-fire-desk" ]]
+  [[ -f "$ENV_FILE" || -d "$APP_DIR" || -f "/etc/systemd/system/douyin-fire-desk.service" ]] && return 0
+  nginx_config_present
 }
 
 valid_port() {

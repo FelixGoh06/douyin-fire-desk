@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Douyin Fire Desk v1.0 installer for Debian/Ubuntu.
+# Douyin Fire Desk v1.0 installer for common systemd Linux servers.
 set -euo pipefail
 
 APP_NAME="douyin-fire-desk"
@@ -57,14 +57,40 @@ if [[ "${EUID}" -ne 0 ]]; then
   exec sudo -E bash "$0" "${ORIGINAL_ARGS[@]}"
 fi
 
-source /etc/os-release
-case "${ID:-}" in
-  debian|ubuntu) ;;
-  *) fail "此安装器仅支持 Debian/Ubuntu。手动部署请阅读 docs/INSTALL.md。" ;;
-esac
+[[ -f /etc/os-release ]] || fail "无法识别 Linux 发行版。"
+[[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 || \
+  fail "Web 管理平台需要 systemd。请在服务器主机的 SSH 终端运行，不要在 Docker 容器终端中运行。"
+if command -v apt-get >/dev/null 2>&1; then
+  PACKAGE_MANAGER="apt"
+elif command -v dnf >/dev/null 2>&1; then
+  PACKAGE_MANAGER="dnf"
+elif command -v yum >/dev/null 2>&1; then
+  PACKAGE_MANAGER="yum"
+else
+  fail "暂不支持当前系统的包管理器。已支持 apt、dnf 和 yum 系统。"
+fi
+
+nginx_config_present() {
+  [[ -f "/etc/nginx/sites-available/${APP_NAME}" || -f "/etc/nginx/conf.d/${APP_NAME}.conf" ]]
+}
+
+create_virtualenv() {
+  if python3 -m venv "$APP_DIR/.venv"; then
+    return
+  fi
+  if command -v virtualenv >/dev/null 2>&1; then
+    virtualenv -p python3 "$APP_DIR/.venv"
+    return
+  fi
+  if python3 -m virtualenv "$APP_DIR/.venv"; then
+    return
+  fi
+  fail "无法创建 Python 虚拟环境，请先运行菜单中的“安装必备依赖”后重试。"
+}
 
 web_already_installed() {
-  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" && -f "/etc/nginx/sites-available/${APP_NAME}" ]] || return 1
+  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" ]] || return 1
+  nginx_config_present || return 1
   systemctl is-enabled --quiet "${APP_NAME}.service" 2>/dev/null && systemctl is-active --quiet "${APP_NAME}.service" 2>/dev/null
 }
 
@@ -105,10 +131,10 @@ fi
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$DATA_DIR" "$PROFILE_DIR"
 
 say "正在安装 Python 依赖与 Chromium"
-python3 -m venv "$APP_DIR/.venv"
+create_virtualenv
 "$APP_DIR/.venv/bin/pip" install --upgrade pip wheel
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
-PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/.playwright" "$APP_DIR/.venv/bin/python" -m playwright install --with-deps chromium
+bash "$APP_DIR/scripts/install-dependencies.sh" --browser-only
 
 if [[ ! -f "$ENV_FILE" ]]; then
   say "正在生成首次运行密钥"
@@ -168,9 +194,22 @@ if ! grep -q '^ADMIN_PASSWORD_UPDATE_COMMAND=' "$ENV_FILE"; then
 fi
 
 install -m 0644 "$APP_DIR/deploy/douyin-fire-desk.service" "/etc/systemd/system/${APP_NAME}.service"
-sed "s/__PUBLIC_PORT__/${PORT}/g" "$APP_DIR/deploy/nginx-ip.conf.template" > "/etc/nginx/sites-available/${APP_NAME}"
-ln -sfn "/etc/nginx/sites-available/${APP_NAME}" "/etc/nginx/sites-enabled/${APP_NAME}"
+if [[ -d /etc/nginx/sites-available ]]; then
+  sed "s/__PUBLIC_PORT__/${PORT}/g" "$APP_DIR/deploy/nginx-ip.conf.template" > "/etc/nginx/sites-available/${APP_NAME}"
+  ln -sfn "/etc/nginx/sites-available/${APP_NAME}" "/etc/nginx/sites-enabled/${APP_NAME}"
+else
+  install -d -m 0755 /etc/nginx/conf.d
+  sed "s/__PUBLIC_PORT__/${PORT}/g" "$APP_DIR/deploy/nginx-ip.conf.template" > "/etc/nginx/conf.d/${APP_NAME}.conf"
+fi
 nginx -t
+
+if command -v getenforce >/dev/null 2>&1 && [[ "$(getenforce)" == "Enforcing" ]]; then
+  if command -v setsebool >/dev/null 2>&1; then
+    setsebool -P httpd_can_network_connect on || fail "无法配置 SELinux 的 Nginx 反向代理权限。"
+  else
+    fail "SELinux 正在强制执行，请安装 policycoreutils 后重新运行。"
+  fi
+fi
 
 chown -R root:root "$APP_DIR"
 chmod -R a+rX "$APP_DIR"

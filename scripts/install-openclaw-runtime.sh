@@ -14,9 +14,18 @@ case "${1:-}" in
 esac
 [[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 或 root 运行。\n' >&2; exit 1; }
 if ! command -v curl >/dev/null 2>&1; then
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update
-  apt-get install -y ca-certificates curl
+  if command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y ca-certificates curl
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y ca-certificates curl
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y ca-certificates curl
+  else
+    printf '未找到 curl，且当前包管理器不受支持。\n' >&2
+    exit 1
+  fi
 fi
 id "$OPENCLAW_USER" >/dev/null 2>&1 || { printf 'OpenClaw 用户不存在：%s\n' "$OPENCLAW_USER" >&2; exit 1; }
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command bootstrap for a clean Debian/Ubuntu host.
+# One-command bootstrap for common Linux servers.
 set -euo pipefail
 
 REPO_NAME="douyin-fire-desk"
@@ -24,11 +24,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -f /etc/os-release ]] || { printf '仅支持 Debian/Ubuntu 服务器。\n' >&2; exit 1; }
-. /etc/os-release
-case "${ID:-}" in debian|ubuntu) ;; *) printf '仅支持 Debian/Ubuntu 服务器。\n' >&2; exit 1 ;; esac
+[[ -f /etc/os-release ]] || { printf '无法识别 Linux 发行版。\n' >&2; exit 1; }
 
 [[ "$EUID" -eq 0 ]] || { printf '请以 root 运行启动脚本：curl ... | sudo bash\n' >&2; exit 1; }
+[[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 || {
+  printf 'Web 管理平台需要 systemd。请在服务器主机的 SSH 终端运行，不要在 Docker 容器终端中运行。\n' >&2
+  exit 1
+}
 
 target="/root/${REPO_NAME}"
 
@@ -55,9 +57,18 @@ if [[ -e "$target" ]]; then
   exit 0
 fi
 
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y ca-certificates curl git
+if command -v apt-get >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get install -y ca-certificates curl git
+elif command -v dnf >/dev/null 2>&1; then
+  dnf install -y ca-certificates curl git
+elif command -v yum >/dev/null 2>&1; then
+  yum install -y ca-certificates curl git
+else
+  printf '暂不支持当前系统的包管理器。已支持 apt、dnf 和 yum 系统。\n' >&2
+  exit 1
+fi
 
 clone() {
   local url="$1"
