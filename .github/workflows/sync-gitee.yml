@@ -22,5 +22,6 @@ jobs:
           git config --global credential.helper store
           printf 'https://gongyu2006:%s@gitee.com\n' "$GITEE_TOKEN" > ~/.git-credentials
           git remote add gitee https://gitee.com/gongyu2006/douyin-fire-desk.git
-          git push --force gitee refs/heads/main:refs/heads/main
+          git fetch origin main --tags
+          git push --force gitee refs/remotes/origin/main:refs/heads/main
           git push --force gitee --tags
