@@ -4,6 +4,7 @@
 
 - After WeChat login, the setup now waits up to 90 seconds for a receiver message and retries automatic pairing approval instead of checking only once.
 - Re-running the installer now detects an already connected WeChat channel and skips the QR-login flow, preventing duplicate scans during recovery or upgrades.
+- The official WeChat plugin installer now owns first-time QR login; the setup no longer invokes a second channel-login QR immediately afterward.
 
 ## v1.0.12
 

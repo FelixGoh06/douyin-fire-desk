@@ -80,6 +80,10 @@ wechat_channel_connected() {
   printf '%s\n' "$status" | grep -Eq '^[-[:space:]]*openclaw-weixin .*enabled, configured, running'
 }
 
+wechat_plugin_installed() {
+  run_as_openclaw "$OPENCLAW_COMMAND" plugins inspect openclaw-weixin >/dev/null 2>&1
+}
+
 install_gateway_service() {
   if systemd_available; then
     run_as_openclaw "$OPENCLAW_COMMAND" gateway install >/dev/null 2>&1 || true
@@ -229,14 +233,18 @@ channel="$(get_env_value OPENCLAW_CHANNEL "$OPENCLAW_ENV_FILE")"
 target="${NOTIFY_TARGET:-$(get_env_value OPENCLAW_NOTIFY_TARGET "$OPENCLAW_ENV_FILE")}"
 if [[ "$WITH_WECHAT" -eq 1 ]]; then
   say "Installing and connecting WeChat"
-  run_as_openclaw npx -y @tencent-weixin/openclaw-weixin-cli install
-  run_as_openclaw "$OPENCLAW_COMMAND" config set plugins.entries.openclaw-weixin.enabled true
-  ensure_gateway
   if wechat_channel_connected; then
     note "WeChat is already connected; skipping the QR login."
-  else
-    note "Scan the QR code with the dedicated OpenClaw WeChat account and confirm on the phone."
+  elif wechat_plugin_installed; then
+    note "WeChat plugin is installed. Scan the QR code with the dedicated OpenClaw WeChat account."
     run_as_openclaw "$OPENCLAW_COMMAND" channels login --channel openclaw-weixin
+    restart_gateway_after_channel_login
+  else
+    note "Install the WeChat plugin, then scan its one QR code with the dedicated OpenClaw WeChat account."
+    # The official WeChat plugin installer performs the initial QR login itself.
+    # Calling `channels login` after it would prompt for a second QR code.
+    run_as_openclaw npx -y @tencent-weixin/openclaw-weixin-cli install
+    run_as_openclaw "$OPENCLAW_COMMAND" config set plugins.entries.openclaw-weixin.enabled true
     restart_gateway_after_channel_login
   fi
   channel="openclaw-weixin"
