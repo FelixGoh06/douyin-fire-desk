@@ -155,7 +155,9 @@ OPENCLAW_COMMAND="$(find_openclaw || true)"
 if [[ -z "$OPENCLAW_COMMAND" ]]; then
   [[ "$INSTALL_OPENCLAW" -eq 1 || "$AUTO_SETUP" -eq 1 ]] || fail "OpenClaw is not installed. Re-run with --install-openclaw."
   say "Installing OpenClaw with the official installer"
-  run_as_openclaw bash -lc 'curl -fsSL https://openclaw.ai/install.sh | bash'
+  # Skip the installer's unrestricted onboarding. The guided `onboard` call below
+  # is deliberately limited to model configuration; this script owns channel setup.
+  run_as_openclaw bash -lc 'curl --proto "=https" --tlsv1.2 -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard --no-prompt'
   OPENCLAW_COMMAND="$(find_openclaw || true)"
   [[ -n "$OPENCLAW_COMMAND" ]] || fail "OpenClaw installation finished but its command was not found. Log in as $OPENCLAW_USER and rerun this script."
 fi
@@ -164,7 +166,7 @@ if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
   [[ "$NON_INTERACTIVE" -eq 0 ]] || fail "Model configuration requires an interactive terminal. Rerun without --non-interactive."
   say "Configure the model provider"
   note "Only the model provider/key screens require your input. Do not paste API keys into chat."
-  onboarding=(onboard --tui --agent-name main --skip-channels --skip-ui --skip-hooks --skip-search)
+  onboarding=(onboard --accept-risk --flow quickstart --skip-channels --skip-ui --skip-hooks --skip-search --skip-skills)
   if systemd_available; then
     onboarding+=(--install-daemon)
   else

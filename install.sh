@@ -166,16 +166,8 @@ if [[ "$OPENCLAW_MODE" == "yes" ]]; then
   bash "$APP_DIR/scripts/setup-openclaw.sh" "${args[@]}"
 fi
 
-ip_address="$(hostname -I 2>/dev/null | awk '{print $1}')"
 say "Installation complete"
-printf 'Web address: http://%s:%s\n' "${ip_address:-YOUR_SERVER_IP}" "$PORT"
-printf 'Admin username: admin\n'
-if [[ -n "$admin_password" ]]; then
-  printf 'Initial password: %s\n' "$admin_password"
-  printf 'Save this password now; it is stored only in %s.\n' "$ENV_FILE"
-else
-  printf 'Existing password was kept in %s.\n' "$ENV_FILE"
-fi
+bash "$APP_DIR/scripts/show-admin-credentials.sh"
 printf 'Show the credentials again: sudo bash %s/scripts/show-admin-credentials.sh\n' "$APP_DIR"
 printf 'Service check: systemctl status %s\n' "$APP_NAME"
 printf 'Cloud security groups/firewalls must allow TCP %s.\n' "$PORT"

@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.0.10
+
+- The bundled OpenClaw onboarding now selects the recommended QuickStart flow automatically before opening model-provider configuration.
+
+## v1.0.9
+
+- The automatic OpenClaw flow now acknowledges the CLI's safety notice before launching the model wizard, leaving model setup and WeChat pairing as the only user interactions.
+
+## v1.0.8
+
+- Updated the bundled model onboarding command for the current OpenClaw CLI, which removed the obsolete `--tui` and `--agent-name` flags.
+
+## v1.0.7
+
+- Prevented the official OpenClaw installer from launching its unrestricted onboarding; the bundled installer now owns the guided flow and only opens the model configuration before it automatically configures the Skill, WeChat plugin, Gateway, and reporting runtime.
+
+## v1.0.6
+
+- Installer and credential recovery now prefer the Tencent Cloud public-IP metadata endpoint, then public IP services, so the displayed Web address does not incorrectly use a `10.x` private address on Tencent Cloud.
+
 ## v1.0.5
 
 - Added a Gitee-first `bootstrap.sh` so a clean mainland server can start with one command.
