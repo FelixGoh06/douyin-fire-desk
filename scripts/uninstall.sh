@@ -7,6 +7,12 @@ PURGE=0
 
 systemctl disable --now douyin-fire-openclaw-notify.timer 2>/dev/null || true
 systemctl disable --now douyin-fire-desk.service 2>/dev/null || true
+if [[ -f /var/lib/douyin-fire-desk/openclaw-runtime/notifier.pid ]]; then
+  kill "$(cat /var/lib/douyin-fire-desk/openclaw-runtime/notifier.pid)" 2>/dev/null || true
+fi
+if [[ -f /var/lib/douyin-fire-desk/openclaw-runtime/gateway.pid ]]; then
+  kill "$(cat /var/lib/douyin-fire-desk/openclaw-runtime/gateway.pid)" 2>/dev/null || true
+fi
 rm -f /etc/systemd/system/douyin-fire-openclaw-notify.service /etc/systemd/system/douyin-fire-openclaw-notify.timer
 rm -f /etc/systemd/system/douyin-fire-desk.service /etc/nginx/sites-enabled/douyin-fire-desk /etc/nginx/sites-available/douyin-fire-desk
 systemctl daemon-reload

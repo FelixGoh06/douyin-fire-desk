@@ -77,8 +77,9 @@ Cookie 在服务器数据库中加密保存。页面不会提供明文查看入�
 ## 8. 修改或恢复配置
 
 - 修改管理员密码：进入 **系统**，填写当前密码、新密码和确认密码。新密码至少 12 位，可用字母、数字和常见英文符号；保存后后台会自动重启并退出当前登录。
+- 忘记当前管理员密码：服务器执行 `sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh`。该命令只显示当前保存的凭据，不会重置密码。
 - 修改账号 Cookie：账号管理 -> 编辑账号 -> 粘贴新 Cookie -> 保存。
 - 暂停任务：任务管理 -> 停用。历史记录不会删除。
 - 删除任务：任务管理 -> 删除，确认后任务及目标好友一起删除。
-- 重新接入 OpenClaw：服务器执行 `sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh`。
+- 重新接入 OpenClaw：服务器执行 `sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh --wechat --auto`。
 - 查看服务问题：服务器执行 `sudo bash /opt/douyin-fire-desk/scripts/doctor.sh`。

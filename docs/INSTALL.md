@@ -1,145 +1,126 @@
 # 傻瓜式安装
 
-本文按“刚买好服务器”的情况写。安装脚本支持 **Debian 12、Ubuntu 22.04、Ubuntu 24.04**，会自动安装 Python、Nginx、Playwright、Chromium、systemd 服务所需依赖。
+这份流程适用于全新的 Debian 12、Ubuntu 22.04 或 Ubuntu 24.04 主机。推荐配置为 2 核、4 GB 内存、20 GB 磁盘；单账号日常占用较低，但首次下载 Chromium 会占用数 GB 磁盘。
 
-## 0. 准备清单
+## 先准备
 
-- 一台 2 核 4 GB 以上的 Linux 服务器，建议至少 20 GB 磁盘。
-- 服务器公网 IP、root 密码或 SSH 密钥。
-- 在云厂商安全组中放行 TCP `22`（SSH）和 `8787`（后台）。
-- 一台能打开浏览器的电脑或手机。
+1. 在云厂商安全组放行 TCP `22` 和 `8787`。
+2. 使用 **系统主机的 SSH 终端** 登录服务器，而不是 Docker 容器终端。
+3. 准备一个专门给 OpenClaw 登录的微信号，以及一个用于接收通知、向它发送指令的微信号。两个角色建议使用不同账号。
+4. 准备模型服务的 Base URL、模型 ID 和 API Key；不要把 API Key、Cookie、服务器密码发到聊天或截图中。
 
-端口 `8787` 可替换。例如想使用 `9000`，将后续安装命令的 `--port 9000` 一并带上，并在安全组放行 `9000`。
+> Web 后台的自动安装依赖 systemd 和 Nginx。腾讯云的“Docker 容器终端”通常没有 systemd，不能直接运行 `install.sh`。请连接云主机本身的 SSH；如果你已自行在容器中运行 Web 后台，仍可使用 OpenClaw 的容器兼容接入流程，见 [OpenClaw 集成](OPENCLAW.md)。
 
-## 1. 登录服务器
+## 一条命令安装
 
-Windows 可以使用 PowerShell，macOS/Linux 使用 Terminal：
-
-```bash
-ssh root@你的服务器IP
-```
-
-第一次连接输入 `yes`，再输入服务器密码。看到类似 `root@...:~#` 表示已经登录成功。
-
-## 2. 下载项目
-
-中国大陆服务器优先使用 Gitee，避免 GitHub TLS 连接不稳定：
+### 中国大陆服务器
 
 ```bash
-apt-get update
-apt-get install -y git
-git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
+curl -fsSL https://gitee.com/gongyu2006/douyin-fire-desk/raw/main/bootstrap.sh | sudo bash
 ```
 
-海外服务器使用 GitHub：
+### 海外服务器
 
 ```bash
-apt-get update
-apt-get install -y git
-git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
+curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bootstrap.sh | sudo bash -- --github
 ```
 
-进入目录：
+脚本自动完成：系统依赖、Python、Playwright、Chromium、Nginx、后台服务、管理员密码、OpenClaw、抖音后台 Skill、腾讯微信插件、Gateway 和通知投递器。
 
-```bash
-cd douyin-fire-desk
-```
+安装过程中只需要你处理以下内容：
 
-如果你已经下载过项目，更新时使用：
+1. **模型配置**：在 OpenClaw 菜单选择模型提供商，填写 API Key、Base URL 与模型 ID。自定义 OpenAI 兼容模型选择 `Custom Provider` -> `OpenAI-compatible`。
+2. **微信扫码**：按终端二维码登录专用 OpenClaw 微信号。
+3. **接收号配对**：用你的接收微信号给刚登录的 OpenClaw 微信号发送任意一条消息；终端提示后按 Enter。安装器会识别该接收号、完成配对，并将它设为自动汇报对象。
 
-```bash
-cd douyin-fire-desk
-git pull
-sudo bash install.sh
-```
+接收号配对不能被静默跳过：系统必须确认谁有权执行续火、读取状态和接收 Cookie 告警，不能把控制权限自动交给任意陌生人。
 
-Gitee 是 GitHub 的国内镜像。若两个仓库版本暂时不同，以 GitHub Release 的版本号为准，等待自动镜像同步后再更新国内服务器。
+## 安装完成后
 
-## 3. 一键安装
-
-普通安装：
-
-```bash
-sudo bash install.sh
-```
-
-脚本会依次：
-
-1. 检查系统类型并更新软件源。
-2. 自动安装缺失的 `curl`、Git、Python、venv、Nginx、OpenSSL、Xvfb。
-3. 创建独立系统用户、数据目录和浏览器 Profile 目录。
-4. 安装 Python 依赖、Playwright 和 Chromium。
-5. 自动生成管理员密码、会话密钥、Cookie 加密密钥和 OpenClaw API Token。
-6. 建立 `douyin-fire-desk.service` 与 Nginx 反向代理，并启动服务。
-
-安装结束时会显示如下信息：
+终端会显示：
 
 ```text
 Web address: http://你的服务器IP:8787
 Admin username: admin
-Initial password: 一串随机密码
+Initial password: 随机密码
 ```
 
-立即把这串密码保存到安全位置。它不会再次显示；服务器上保存位置为 `/etc/douyin-fire-desk.env`。
+浏览器打开 `http://你的服务器公网IP:8787`。`7788` 是仅供 OpenClaw 调用的内部端口，绝不能作为公网后台地址或安全组放行端口。
 
-## 4. 打开后台
-
-浏览器输入：
-
-```text
-http://你的服务器IP:8787
-```
-
-用户名是 `admin`，密码是上一步末尾显示的初始密码。登录后按 [使用手册](USAGE.md) 添加账号和任务。
-
-如果网页打不开，优先检查：
+如果忘记首次显示的密码，在服务器执行：
 
 ```bash
-sudo bash /opt/douyin-fire-desk/scripts/doctor.sh
-sudo ss -lntp | grep 8787
+sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 ```
 
-再确认云安全组和服务器防火墙允许 TCP `8787`。Ubuntu 使用 UFW 时可执行：
+它会再次显示当前管理员账号、密码和地址提示，不会修改密码。网页内也可以从左下角的 **修改密码** 修改。
+
+## 不用一条命令时
+
+大陆服务器：
+
+```bash
+git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
+cd douyin-fire-desk
+sudo bash install.sh --with-openclaw
+```
+
+海外服务器：
+
+```bash
+git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
+cd douyin-fire-desk
+sudo bash install.sh --with-openclaw
+```
+
+`--with-openclaw` 现在会自动安装缺失的 OpenClaw 并执行微信接入；不再要求你手填 channel、target 或手动复制 Skill。
+
+## 首次使用后台
+
+1. 登录 **账号管理**，新增账号并粘贴 Cookie。
+2. 打开 **任务管理**，创建任务，选择账号，填写目标好友昵称、发送时间和消息。
+3. 先点击一次 **执行**，在实时日志确认浏览器找到了目标昵称。
+4. 需要当晚确认对方有没有续火时，开启 **晚间检查** 并设置时间。
+5. 在 **OpenClaw** 页面开启需要的续火汇报、晚间检查汇报、Cookie 健康检查和 Cookie 健康回复。
+
+同一时间的任务自动合并为一条消息：续火按失败、成功排序；晚间检查按未续、未知、已续排序；Cookie 按未保存、失效、未知、有效排序。
+
+## 端口与地址排查
+
+网页打不开时，先在服务器执行：
+
+```bash
+sudo ss -lntp | grep -E ':(8787|7788)\\b'
+sudo bash /opt/douyin-fire-desk/scripts/doctor.sh
+```
+
+- `0.0.0.0:8787` 或 `[::]:8787`：服务器已公开 Web 端口，检查安全组/UFW 是否放行 `8787`。
+- 只有 `127.0.0.1:7788`：应用内部正常，但 Nginx 公网入口没有启动。运行 `sudo systemctl restart nginx douyin-fire-desk.service` 后重试。
+- 使用 Docker：还需要在 Docker 主机映射 `8787:8787`；不要把 `7788` 映射公网。
+
+Ubuntu 启用 UFW 时：
 
 ```bash
 sudo ufw allow 8787/tcp
 ```
 
-## 5. 选择 OpenClaw（可选）
+## 更新与卸载
 
-想要自动汇报和对话式操作，安装时选择 `y`，或直接执行：
+更新：
 
 ```bash
+cd /root/douyin-fire-desk
+git pull
 sudo bash install.sh --with-openclaw
 ```
 
-服务器还没有 OpenClaw 时，使用：
-
-```bash
-sudo bash install.sh --install-openclaw
-```
-
-该命令会调用 OpenClaw 官方安装地址 `https://openclaw.ai/install.sh`。首次安装会启动官方 `openclaw onboard --install-daemon`；根据屏幕提示完成你的消息渠道登录。随后填写通知渠道和收件人。详细步骤在 [OPENCLAW.md](OPENCLAW.md)。
-
-## 常用参数
-
-```bash
-sudo bash install.sh --port 9000
-sudo bash install.sh --without-openclaw
-sudo bash install.sh --with-openclaw
-sudo bash install.sh --install-openclaw
-sudo bash install.sh --non-interactive --without-openclaw
-```
-
-## 卸载与保留数据
-
-停止服务但保留数据库、Cookie、Profile 和配置：
+卸载服务但保留数据：
 
 ```bash
 sudo bash /opt/douyin-fire-desk/scripts/uninstall.sh
 ```
 
-彻底删除所有运行数据（不可恢复）：
+彻底清除账号、Cookie、浏览器 Profile、数据库与配置：
 
 ```bash
 sudo bash /opt/douyin-fire-desk/scripts/uninstall.sh --purge

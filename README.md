@@ -2,7 +2,7 @@
 
 **抖音火花运营台**。面向个人服务器的 Web 管理后台：集中保存账号 Cookie、按昵称维护好友、定时发送续火消息、晚间检查对方是否续火，并可通过 OpenClaw 汇总通知和操作后台。
 
-> Version: **v1.0.0** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
+> Version: **v1.0.5** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
 
 ## 这是什么
 
@@ -26,39 +26,28 @@ Douyin Fire Desk 将浏览器自动化、任务调度和通知集中到一台 Li
 
 完整操作见 [使用手册](docs/USAGE.md)，OpenClaw 见 [OpenClaw 集成](docs/OPENCLAW.md)。
 
-## 3 分钟安装
+## 一条命令安装
 
-1. 在云厂商安全组/防火墙中放行 TCP `8787`（也可换成其他端口）。
-2. SSH 登录 Debian/Ubuntu 服务器，按服务器所在地执行：
+先在安全组/防火墙放行 TCP `8787`，然后用 **系统主机 SSH** 登录 Debian/Ubuntu 服务器。Web 后台安装依赖 systemd；不要在没有 systemd 的 Docker 容器终端直接运行这个主安装器。
 
-**中国大陆服务器（推荐 Gitee）：**
+**中国大陆服务器（Gitee 优先，自动回退 GitHub）：**
 
 ```bash
-git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
-cd douyin-fire-desk
-sudo bash install.sh
+curl -fsSL https://gitee.com/gongyu2006/douyin-fire-desk/raw/main/bootstrap.sh | sudo bash
 ```
 
-**海外服务器（GitHub）：**
+**海外服务器：**
 
 ```bash
-git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
-cd douyin-fire-desk
-sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bootstrap.sh | sudo bash -- --github
 ```
 
-3. 安装结束会输出后台网址和一次性的初始管理员密码。在浏览器打开 `http://你的服务器IP:8787` 登录。
+该命令会自动安装后台、依赖、OpenClaw、`douyin-fire-admin` Skill、腾讯微信插件和通知投递器。首次只需要完成模型配置，以及微信扫码和接收号配对；不必手动填写 OpenClaw channel、target 或复制 Skill。
 
-4. 需要通知和对话控制时：
-
-```bash
-sudo bash install.sh --with-openclaw
-```
-
-OpenClaw 不存在时，安装器会询问是否按照官方命令安装；也可以明确执行：
+安装结束会输出 Web 地址和管理员密码。忘记密码或地址时，服务器执行：
 
 ```bash
-sudo bash install.sh --install-openclaw
+sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 ```
 
 逐步、带排错的说明在 [docs/INSTALL.md](docs/INSTALL.md)。
@@ -95,7 +84,8 @@ docs/                        安装、操作、安全、排错和架构文档
 sudo bash /opt/douyin-fire-desk/scripts/doctor.sh
 sudo journalctl -u douyin-fire-desk.service -f
 sudo systemctl restart douyin-fire-desk.service
-sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh
+sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh --wechat --auto
+sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 ```
 
 ## 安全说明

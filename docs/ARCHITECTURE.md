@@ -7,7 +7,8 @@ Browser -> Nginx (public port) -> FastAPI (127.0.0.1:7788)
                                       +-> APScheduler -> Playwright/Chromium -> Douyin Web
                                       +-> local OpenClaw control API
                                                         |
-OpenClaw Skill + systemd timer -------+-> batch notifications -> OpenClaw channel
+OpenClaw Skill + notifier runtime ----+-> batch notifications -> OpenClaw channel
+                  (systemd timer or container loop)
 ```
 
 ## 组件职责
@@ -17,7 +18,7 @@ OpenClaw Skill + systemd timer -------+-> batch notifications -> OpenClaw channe
 - **APScheduler**：按任务时间运行续火、晚间检查与 Cookie 健康检查；同时间规则聚合为批次。
 - **Playwright/Chromium**：使用独立浏览器 Profile 执行网页动作和识别。
 - **OpenClaw Skill**：调用本机 token API，查询与执行真实任务，禁止读取 Cookie 明文。
-- **Notifier timer**：每分钟拉取已聚合的后台通知，调用配置的 OpenClaw channel 发送。
+- **Notifier runtime**：每分钟拉取已聚合的后台通知，调用配置的 OpenClaw channel 发送；普通主机用 systemd timer，缺少 systemd 的容器用后台循环。
 
 ## 数据流
 

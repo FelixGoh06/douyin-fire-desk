@@ -23,7 +23,7 @@ Usage: sudo bash install.sh [options]
 
 Options:
   --port PORT           Public web port (default: 8787)
-  --with-openclaw       Install and connect the optional OpenClaw integration
+  --with-openclaw       Automatically install OpenClaw, WeChat, Skill, and reports
   --without-openclaw    Skip OpenClaw integration
   --install-openclaw    Install OpenClaw through its official installer when absent
   --non-interactive     Do not ask questions; OpenClaw is skipped unless requested
@@ -37,7 +37,7 @@ fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) PORT="${2:-}"; shift 2 ;;
-    --with-openclaw) OPENCLAW_MODE="yes"; shift ;;
+    --with-openclaw) OPENCLAW_MODE="yes"; INSTALL_OPENCLAW=1; shift ;;
     --without-openclaw) OPENCLAW_MODE="no"; shift ;;
     --install-openclaw) OPENCLAW_MODE="yes"; INSTALL_OPENCLAW=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; shift ;;
@@ -160,7 +160,7 @@ if [[ "$OPENCLAW_MODE" == "ask" && "$NON_INTERACTIVE" -eq 0 ]]; then
   [[ "$answer" =~ ^[Yy]$ ]] && OPENCLAW_MODE="yes" || OPENCLAW_MODE="no"
 fi
 if [[ "$OPENCLAW_MODE" == "yes" ]]; then
-  args=()
+  args=(--wechat --auto)
   [[ "$INSTALL_OPENCLAW" -eq 1 ]] && args+=(--install-openclaw)
   [[ "$NON_INTERACTIVE" -eq 1 ]] && args+=(--non-interactive)
   bash "$APP_DIR/scripts/setup-openclaw.sh" "${args[@]}"
@@ -176,5 +176,6 @@ if [[ -n "$admin_password" ]]; then
 else
   printf 'Existing password was kept in %s.\n' "$ENV_FILE"
 fi
+printf 'Show the credentials again: sudo bash %s/scripts/show-admin-credentials.sh\n' "$APP_DIR"
 printf 'Service check: systemctl status %s\n' "$APP_NAME"
 printf 'Cloud security groups/firewalls must allow TCP %s.\n' "$PORT"

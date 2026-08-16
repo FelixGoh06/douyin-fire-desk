@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.5
+
+- Added a Gitee-first `bootstrap.sh` so a clean mainland server can start with one command.
+- Made `install.sh --with-openclaw` install OpenClaw, the bundled Skill, Tencent WeChat plugin, and the report runtime automatically.
+- Reduced first-run OpenClaw interaction to model configuration and WeChat account/recipient pairing.
+- Added a container fallback for the OpenClaw Gateway and notification loop when systemd is unavailable.
+- Added `show-admin-credentials.sh` for securely displaying the existing administrator password and public URL hint again.
+- Expanded installation and troubleshooting documentation with public-port, Docker, China-network, WeChat pairing, and password-recovery guidance.
+
 ## v1.0.4 - 2026-08-16
 
 - Added a Gitee-first installation path for mainland China servers and a GitHub Actions workflow for mirror synchronization.
