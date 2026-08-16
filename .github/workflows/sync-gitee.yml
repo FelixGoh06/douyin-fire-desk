@@ -8,13 +8,13 @@ on:
 
 jobs:
   mirror:
-    if: ${{ secrets.GITEE_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Push main branch and tags to Gitee
+        if: ${{ env.GITEE_TOKEN != '' }}
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
