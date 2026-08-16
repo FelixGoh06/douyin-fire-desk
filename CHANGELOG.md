@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.13
+
+- After WeChat login, the setup now waits up to 90 seconds for a receiver message and retries automatic pairing approval instead of checking only once.
+
+## v1.0.12
+
+- Made OpenClaw Gateway startup idempotent: the setup now installs the user service when missing, waits for one healthy startup, and performs one controlled reload after WeChat login instead of issuing overlapping restarts during startup migrations.
+
 ## v1.0.11
 
 - Fixed interactive OpenClaw setup after the one-line `curl | sudo bash` command: the bootstrapper now reconnects the installer to `/dev/tty`, so model selection receives arrow-key and Enter input instead of exiting with an unsettled top-level-await warning.

@@ -74,6 +74,12 @@ gateway_status() {
   run_as_openclaw "$OPENCLAW_COMMAND" gateway status >/dev/null 2>&1
 }
 
+install_gateway_service() {
+  if systemd_available; then
+    run_as_openclaw "$OPENCLAW_COMMAND" gateway install >/dev/null 2>&1 || true
+  fi
+}
+
 start_container_gateway() {
   local pid_file="$RUNTIME_DIR/gateway.pid"
   local log_file="$RUNTIME_DIR/gateway.log"
@@ -91,9 +97,27 @@ ensure_gateway() {
   gateway_status && return 0
   if systemd_available; then
     say "Starting the managed OpenClaw Gateway"
+    install_gateway_service
+    run_as_openclaw "$OPENCLAW_COMMAND" gateway start >/dev/null 2>&1 || true
+    for _ in 1 2 3 4 5 6; do
+      sleep 5
+      gateway_status && return 0
+    done
+    fail "Gateway is unavailable. Run: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+  else
+    start_container_gateway
+  fi
+}
+
+restart_gateway_after_channel_login() {
+  if systemd_available; then
+    say "Reloading the Gateway after WeChat login"
     run_as_openclaw "$OPENCLAW_COMMAND" gateway restart >/dev/null 2>&1 || true
-    sleep 3
-    gateway_status || fail "Gateway is unavailable. Run: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+    for _ in 1 2 3 4 5 6; do
+      sleep 5
+      gateway_status && return 0
+    done
+    fail "Gateway did not recover after WeChat login. Run: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
   else
     start_container_gateway
   fi
@@ -138,6 +162,17 @@ discover_wechat_recipient() {
   fi
   NOTIFY_TARGET="$candidate"
   return 0
+}
+
+wait_for_wechat_recipient() {
+  local attempt
+  for attempt in $(seq 1 18); do
+    if discover_wechat_recipient; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
 }
 
 get_env_value() {
@@ -193,15 +228,16 @@ if [[ "$WITH_WECHAT" -eq 1 ]]; then
   ensure_gateway
   note "Scan the QR code with the dedicated OpenClaw WeChat account and confirm on the phone."
   run_as_openclaw "$OPENCLAW_COMMAND" channels login --channel openclaw-weixin
-  ensure_gateway
+  restart_gateway_after_channel_login
   channel="openclaw-weixin"
   if [[ -z "$target" && "$NON_INTERACTIVE" -eq 0 ]]; then
     note "From the receiving WeChat account, send any message to the account just connected."
-    read -r -p "After the pairing request appears, press Enter to bind that receiver automatically: " _
-    if discover_wechat_recipient; then
+    read -r -p "After sending the message, press Enter to bind that receiver automatically: " _
+    note "Waiting up to 90 seconds for the receiver pairing request."
+    if wait_for_wechat_recipient; then
       note "WeChat receiver bound automatically."
     else
-      note "Receiver was not found yet. The Skill works, but automatic reports will stay off until you rerun this script after pairing."
+      note "Receiver was not found yet. The Skill works, but automatic reports will stay off until you rerun this script after the receiver sends a pairing message."
     fi
   fi
 elif [[ "$NON_INTERACTIVE" -eq 0 && "$AUTO_SETUP" -eq 0 ]]; then
