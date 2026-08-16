@@ -25,11 +25,11 @@ curl -fsSL https://gitee.com/gongyu2006/douyin-fire-desk/raw/main/bootstrap.sh |
 curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bootstrap.sh | sudo bash -- --github
 ```
 
-脚本自动完成：系统依赖、Python、Playwright、Chromium、Nginx、后台服务、管理员密码、OpenClaw、抖音后台 Skill、腾讯微信插件、Gateway 和通知投递器。
+执行后会先进入 `GONGYU` 主菜单：选择 `1` 是完整的一键安装；选择 `2` 只安装 Web 管理后台。完整安装会自动完成系统依赖、Python、Playwright、Chromium、Nginx、后台服务、管理员密码、OpenClaw、抖音后台 Skill、腾讯微信插件、Gateway 和通知投递器。
 
 > 一键命令会自动把 OpenClaw 向导的键盘输入重新连接到当前终端。看到模型选择菜单后，直接使用方向键和 Enter；不要在该命令执行期间另开一个 Shell 再运行 `openclaw onboard`。
 
-安装过程中只需要你处理以下内容：
+选择完整安装后，只需要你处理以下内容：
 
 1. **模型配置**：在 OpenClaw 菜单选择模型提供商，填写 API Key、Base URL 与模型 ID。自定义 OpenAI 兼容模型选择 `Custom Provider` -> `OpenAI-compatible`。
 2. **微信扫码**：按终端二维码登录专用 OpenClaw 微信号。
@@ -57,6 +57,21 @@ sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 
 它会再次显示当前管理员账号、密码和地址提示，不会修改密码。网页内也可以从左下角的 **修改密码** 修改。
 
+## GONGYU 主菜单
+
+安装过 Web 管理平台后，在服务器输入 `gongyu` 可随时打开管理入口；非 root 用户会自动请求 sudo 权限。数字菜单包含：
+
+1. 一键安装全部组件。
+2. 只安装 Web 管理平台，并输出账号、密码、访问地址和端口放行提示。
+3. 分级卸载：保留数据停服务、删除 Web 数据、移除本项目 OpenClaw 集成或清理本项目全部组件。
+4. 从 OpenClaw 官方安装器安装或配置 OpenClaw；只保留模型向导交互，并确认 Gateway 已运行。
+5. 安装/刷新 `douyin-fire-admin` Skill、微信插件或检查 OpenClaw 状态。未安装 OpenClaw 时会提示先选择 `4`。
+6. 读取当前管理员用户名和密码。网页修改密码后，这里会显示新密码。
+7. 检查并安装缺失的系统依赖；已安装 Web 时也会补齐 Python/Chromium 运行时。
+8. 运行服务诊断。
+
+每个二级菜单都可以输入 `0` 返回主菜单。卸载本项目不会删除可供其他程序使用的 OpenClaw 本体、模型配置或无关插件。
+
 ## 不用一条命令时
 
 大陆服务器：
@@ -64,7 +79,7 @@ sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 ```bash
 git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
 cd douyin-fire-desk
-sudo bash install.sh --with-openclaw
+sudo bash gongyu.sh
 ```
 
 海外服务器：
@@ -72,10 +87,10 @@ sudo bash install.sh --with-openclaw
 ```bash
 git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
 cd douyin-fire-desk
-sudo bash install.sh --with-openclaw
+sudo bash gongyu.sh
 ```
 
-`--with-openclaw` 现在会自动安装缺失的 OpenClaw 并执行微信接入；不再要求你手填 channel、target 或手动复制 Skill。
+主菜单的 `1` 会自动安装缺失的 OpenClaw 并执行微信接入；不再要求你手填 channel、target 或手动复制 Skill。
 
 ## 首次使用后台
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.14
+
+- Added the `GONGYU` interactive terminal entry point. After Web installation, run `sudo gongyu` to open the numbered menu for full/Web-only installation, component cleanup, OpenClaw setup, plugin setup, credential display, dependency repair, and diagnostics.
+- Made the one-line bootstrap command open the GONGYU menu by default instead of immediately starting a fixed installation path.
+- Added missing-package checks, a standalone official OpenClaw runtime installer, and scoped OpenClaw-integration cleanup.
+
 ## v1.0.13
 
 - After WeChat login, the setup now waits up to 90 seconds for a receiver message and retries automatic pairing approval instead of checking only once.

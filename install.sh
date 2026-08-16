@@ -60,10 +60,8 @@ case "${ID:-}" in
   *) fail "Only Debian and Ubuntu are supported by this installer. See docs/INSTALL.md for manual deployment." ;;
 esac
 
-say "Installing required system packages"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y ca-certificates curl git nginx openssl python3 python3-pip python3-venv rsync sudo xvfb
+say "Checking required system packages"
+bash "$SCRIPT_DIR/scripts/install-dependencies.sh"
 
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
@@ -74,10 +72,14 @@ fi
 
 say "Installing application files"
 install -d -m 0755 "$APP_DIR"
-rsync -a --delete \
-  --exclude '.git/' --exclude '.venv/' --exclude '.playwright/' --exclude '__pycache__/' \
-  --exclude '.pytest_cache/' --exclude 'data/' --exclude '*.db' \
-  "${SCRIPT_DIR}/" "${APP_DIR}/"
+if [[ "$(readlink -f "$SCRIPT_DIR")" != "$(readlink -f "$APP_DIR")" ]]; then
+  rsync -a --delete \
+    --exclude '.git/' --exclude '.venv/' --exclude '.playwright/' --exclude '__pycache__/' \
+    --exclude '.pytest_cache/' --exclude 'data/' --exclude '*.db' \
+    "${SCRIPT_DIR}/" "${APP_DIR}/"
+else
+  say "Using the installed application files"
+fi
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$DATA_DIR" "$PROFILE_DIR"
 
 say "Installing Python dependencies and Chromium"
@@ -125,6 +127,7 @@ fi
 
 install -d -m 0755 /usr/local/lib/douyin-fire-desk
 install -m 0700 "$APP_DIR/deploy/update-admin-password.py" /usr/local/lib/douyin-fire-desk/update-admin-password
+install -m 0755 "$APP_DIR/deploy/gongyu" /usr/local/bin/gongyu
 printf '%s ALL=(root) NOPASSWD: /usr/local/lib/douyin-fire-desk/update-admin-password\n' "$SERVICE_USER" > /etc/sudoers.d/douyin-fire-desk-password
 chmod 0440 /etc/sudoers.d/douyin-fire-desk-password
 visudo -cf /etc/sudoers.d/douyin-fire-desk-password
@@ -169,5 +172,6 @@ fi
 say "Installation complete"
 bash "$APP_DIR/scripts/show-admin-credentials.sh"
 printf 'Show the credentials again: sudo bash %s/scripts/show-admin-credentials.sh\n' "$APP_DIR"
+printf 'Open the management script: gongyu\n'
 printf 'Service check: systemctl status %s\n' "$APP_NAME"
 printf 'Cloud security groups/firewalls must allow TCP %s.\n' "$PORT"

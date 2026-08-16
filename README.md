@@ -2,7 +2,7 @@
 
 **抖音火花运营台**。面向个人服务器的 Web 管理后台：集中保存账号 Cookie、按昵称维护好友、定时发送续火消息、晚间检查对方是否续火，并可通过 OpenClaw 汇总通知和操作后台。
 
-> Version: **v1.0.13** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
+> Version: **v1.0.14** | License: [MIT](LICENSE) | Runtime: Debian/Ubuntu Linux
 
 ## 这是什么
 
@@ -42,7 +42,15 @@ curl -fsSL https://gitee.com/gongyu2006/douyin-fire-desk/raw/main/bootstrap.sh |
 curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bootstrap.sh | sudo bash -- --github
 ```
 
-该命令会自动安装后台、依赖、OpenClaw、`douyin-fire-admin` Skill、腾讯微信插件和通知投递器。首次只需要完成模型配置，以及微信扫码和接收号配对；不必手动填写 OpenClaw channel、target 或复制 Skill。
+该命令会先打开 `GONGYU` 终端主菜单。选择 `1` 即可完成后台、依赖、OpenClaw、`douyin-fire-admin` Skill、腾讯微信插件和通知投递器的一键安装；首次只需要完成模型配置，以及微信扫码和接收号配对。
+
+安装过 Web 平台后，随时在服务器输入以下命令重新打开主菜单：
+
+```bash
+gongyu
+```
+
+菜单提供一键安装、仅安装 Web、分级卸载、单独安装 OpenClaw、安装 Skill/微信插件、查看当前管理员账号密码、依赖补齐和运行诊断。
 
 安装结束会输出 Web 地址和管理员密码。忘记密码或地址时，服务器执行：
 
@@ -86,6 +94,7 @@ sudo journalctl -u douyin-fire-desk.service -f
 sudo systemctl restart douyin-fire-desk.service
 sudo bash /opt/douyin-fire-desk/scripts/setup-openclaw.sh --wechat --auto
 sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
+gongyu
 ```
 
 ## 安全说明

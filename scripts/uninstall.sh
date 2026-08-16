@@ -19,7 +19,9 @@ systemctl daemon-reload
 systemctl reload nginx 2>/dev/null || true
 if [[ "$PURGE" -eq 1 ]]; then
   rm -rf /opt/douyin-fire-desk /var/lib/douyin-fire-desk /var/lib/douyin-fire-profiles
-  rm -f /etc/douyin-fire-desk.env /etc/douyin-fire-desk-openclaw.env
+  rm -f /etc/douyin-fire-desk.env /etc/douyin-fire-desk-agent.env /etc/douyin-fire-desk-openclaw.env
+  rm -f /etc/sudoers.d/douyin-fire-desk-password /usr/local/bin/gongyu
+  rm -rf /usr/local/lib/douyin-fire-desk
   printf 'Application, profiles, database, and configuration removed.\n'
 else
   printf 'Service removed. Data and secrets were kept. Use --purge to delete them too.\n'

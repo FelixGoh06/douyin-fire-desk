@@ -6,14 +6,12 @@ REPO_NAME="douyin-fire-desk"
 GITEE_URL="https://gitee.com/gongyu2006/douyin-fire-desk.git"
 GITHUB_URL="https://github.com/FelixGoh06/douyin-fire-desk.git"
 SOURCE="auto"
-INSTALL_ARGS=(--with-openclaw)
 
 usage() {
   cat <<'EOF'
-Usage: bash bootstrap.sh [--gitee|--github] [--without-openclaw] [--port PORT]
+Usage: bash bootstrap.sh [--gitee|--github]
 
-The default source tries Gitee first, then GitHub. OpenClaw + WeChat are enabled
-by default; the only interactive steps are model configuration and WeChat pairing.
+The default source tries Gitee first, then GitHub, then opens the GONGYU menu.
 EOF
 }
 
@@ -21,8 +19,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --gitee) SOURCE="gitee"; shift ;;
     --github) SOURCE="github"; shift ;;
-    --without-openclaw) INSTALL_ARGS=(--without-openclaw); shift ;;
-    --port) INSTALL_ARGS+=(--port "${2:-}"); shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 1 ;;
   esac
@@ -53,9 +49,10 @@ case "$SOURCE" in
 esac
 
 cd "$target"
-# `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. The
-# OpenClaw model wizard needs the caller's terminal for arrow keys and input.
+# `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. Reconnect
+# the interactive GONGYU menu to the caller's terminal before opening it.
 if [[ -r /dev/tty ]]; then
-  exec bash install.sh "${INSTALL_ARGS[@]}" </dev/tty
+  exec bash gongyu.sh </dev/tty
 fi
-exec bash install.sh "${INSTALL_ARGS[@]}"
+printf 'A terminal is required for the GONGYU menu. Run this command from an SSH terminal.\n' >&2
+exit 1
