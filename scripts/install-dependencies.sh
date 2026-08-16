@@ -37,10 +37,18 @@ else
 fi
 
 if [[ "$WITH_RUNTIME" -eq 1 && -x /opt/douyin-fire-desk/.venv/bin/python ]]; then
-  printf '正在刷新已安装的 Python 依赖与 Chromium 运行时。\n'
   app_dir="/opt/douyin-fire-desk"
-  "$app_dir/.venv/bin/pip" install -r "$app_dir/requirements.txt"
-  PLAYWRIGHT_BROWSERS_PATH="$app_dir/.playwright" "$app_dir/.venv/bin/python" -m playwright install --with-deps chromium
+  runtime_ok=1
+  "$app_dir/.venv/bin/python" -c 'import apscheduler, cryptography, fastapi, httpx, jinja2, multipart, playwright, uvicorn' >/dev/null 2>&1 || runtime_ok=0
+  "$app_dir/.venv/bin/pip" check >/dev/null 2>&1 || runtime_ok=0
+  compgen -G "$app_dir/.playwright/chromium-*" >/dev/null || runtime_ok=0
+  if [[ "$runtime_ok" -eq 1 ]]; then
+    printf 'Python 依赖和 Chromium 运行时均已完整，已跳过重复安装。\n'
+  else
+    printf '检测到 Python 依赖或 Chromium 运行时缺失，正在补齐。\n'
+    "$app_dir/.venv/bin/pip" install -r "$app_dir/requirements.txt"
+    PLAYWRIGHT_BROWSERS_PATH="$app_dir/.playwright" "$app_dir/.venv/bin/python" -m playwright install --with-deps chromium
+  fi
 elif [[ "$WITH_RUNTIME" -eq 1 ]]; then
   printf '系统依赖已就绪。安装 Web 管理平台后会自动创建独立的 Python 与 Chromium 运行时。\n'
 fi

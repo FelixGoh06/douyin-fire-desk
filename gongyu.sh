@@ -82,7 +82,12 @@ installed_project_dir() {
 }
 
 project_is_installed() {
-  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" ]]
+  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" && -f "/etc/nginx/sites-available/douyin-fire-desk" ]] || return 1
+  systemctl is-enabled --quiet douyin-fire-desk.service 2>/dev/null && systemctl is-active --quiet douyin-fire-desk.service 2>/dev/null
+}
+
+web_files_present() {
+  [[ -f "$ENV_FILE" || -d "$APP_DIR" || -f "/etc/systemd/system/douyin-fire-desk.service" || -f "/etc/nginx/sites-available/douyin-fire-desk" ]]
 }
 
 valid_port() {
@@ -91,16 +96,34 @@ valid_port() {
 
 install_full() {
   say "一键安装"
-  note "将安装 Web 管理平台、依赖、Chromium、OpenClaw、内置 Skill、微信插件、Gateway 和汇报运行时。"
-  note "只需要在提示时配置模型，并完成微信扫码和接收号配对。"
+  if project_is_installed && openclaw_available && openclaw_configured && openclaw_gateway_healthy && skill_installed && wechat_channel_connected && wechat_recipient_configured; then
+    note "Web 管理平台、OpenClaw、Skill、微信和通知接收者均已配置完成，无需重复安装。"
+    return
+  fi
+  note "系统会自动跳过已安装的组件，只补齐缺失或未完成配置的部分。"
+  note "首次接入 OpenClaw 时，只需要配置模型、微信扫码和接收号配对。"
   if confirm "现在开始完整安装？"; then
-    bash "$PROJECT_DIR/install.sh" --with-openclaw
+    if ! project_is_installed; then
+      bash "$PROJECT_DIR/install.sh" --with-openclaw
+    elif ! openclaw_available; then
+      note "Web 管理平台已安装，跳过 Web 重装；正在补装 OpenClaw 集成。"
+      bash "$PROJECT_DIR/scripts/install-openclaw-runtime.sh"
+      bash "$APP_DIR/scripts/setup-openclaw.sh" --wechat --auto
+    elif ! openclaw_configured || ! openclaw_gateway_healthy || ! skill_installed || ! wechat_channel_connected || ! wechat_recipient_configured; then
+      note "Web 管理平台已安装，正在补齐 OpenClaw、Skill、微信或通知接收者配置。"
+      bash "$APP_DIR/scripts/setup-openclaw.sh" --wechat --auto
+    fi
   fi
 }
 
 install_web_only() {
   local port
   say "仅安装 Web 管理平台"
+  if project_is_installed; then
+    note "Web 管理平台已安装，已跳过重复安装。"
+    bash "$APP_DIR/scripts/show-admin-credentials.sh"
+    return
+  fi
   read -r -p "公网端口 [$DEFAULT_PORT]: " port
   port="${port:-$DEFAULT_PORT}"
   if ! valid_port "$port"; then
@@ -140,9 +163,48 @@ run_openclaw() {
   runuser -u "$user" -- env HOME="$home" PATH="$home/.local/share/pnpm:$home/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "$command" "$@"
 }
 
+openclaw_configured() {
+  local home
+  home="$(getent passwd "$(openclaw_user)" 2>/dev/null | cut -d: -f6 || true)"
+  [[ -n "$home" && -f "$home/.openclaw/openclaw.json" ]]
+}
+
+openclaw_gateway_healthy() {
+  local status
+  openclaw_available || return 1
+  status="$(run_openclaw gateway status 2>&1 || true)"
+  printf '%s\n' "$status" | grep -q 'Runtime: running' && printf '%s\n' "$status" | grep -q 'Connectivity probe: ok'
+}
+
+skill_installed() {
+  local home
+  home="$(getent passwd "$(openclaw_user)" 2>/dev/null | cut -d: -f6 || true)"
+  [[ -n "$home" && -d "$home/.openclaw/workspace/skills/douyin-fire-admin" ]]
+}
+
+wechat_channel_connected() {
+  local status
+  openclaw_available || return 1
+  status="$(run_openclaw channels status --probe 2>&1 || true)"
+  printf '%s\n' "$status" | grep -Eq '^[-[:space:]]*openclaw-weixin .*enabled, configured, running'
+}
+
+wechat_recipient_configured() {
+  [[ -f /etc/douyin-fire-desk-openclaw.env ]] || return 1
+  grep -q '^OPENCLAW_CHANNEL=openclaw-weixin$' /etc/douyin-fire-desk-openclaw.env && grep -q '^OPENCLAW_NOTIFY_TARGET=.' /etc/douyin-fire-desk-openclaw.env
+}
+
 install_openclaw() {
   say "安装 OpenClaw"
-  note "将从 OpenClaw 官方安装器部署；仅保留模型配置向导需要手动操作。"
+  if openclaw_available && openclaw_configured && openclaw_gateway_healthy; then
+    note "OpenClaw、模型配置和 Gateway 均已正常，无需重复安装。"
+    return
+  fi
+  if openclaw_available; then
+    note "已检测到 OpenClaw，不会重复下载；只补齐模型配置或 Gateway。"
+  else
+    note "将从 OpenClaw 官方安装器部署；仅保留模型配置向导需要手动操作。"
+  fi
   if confirm "现在安装或配置 OpenClaw？"; then
     bash "$PROJECT_DIR/scripts/install-openclaw-runtime.sh"
     if project_is_installed; then
@@ -176,8 +238,25 @@ openclaw_plugin_menu() {
     printf '  0. 返回脚本主菜单\n\n'
     read -r -p '请选择编号: ' choice
     case "$choice" in
-      1) bash "$source/scripts/setup-openclaw.sh" --auto; pause ;;
-      2) bash "$source/scripts/setup-openclaw.sh" --wechat --auto; pause ;;
+      1)
+        if skill_installed; then
+          note "douyin-fire-admin Skill 已安装，已跳过重复安装。"
+        else
+          bash "$source/scripts/setup-openclaw.sh" --auto
+        fi
+        pause
+        ;;
+      2)
+        if wechat_channel_connected && wechat_recipient_configured; then
+          note "微信插件、登录状态和通知接收者均已配置完成，已跳过重复连接。"
+        elif wechat_channel_connected; then
+          note "微信已登录；仅继续等待接收微信号发消息完成配对，不会再次扫码。"
+          bash "$source/scripts/setup-openclaw.sh" --wechat --auto
+        else
+          bash "$source/scripts/setup-openclaw.sh" --wechat --auto
+        fi
+        pause
+        ;;
       3)
         run_openclaw gateway status || true
         run_openclaw channels status --probe || true
@@ -216,19 +295,27 @@ uninstall_menu() {
     read -r -p '请选择编号: ' choice
     case "$choice" in
       1)
-        if confirm "移除 Web 服务但保留数据？"; then bash "$source/scripts/uninstall.sh"; fi
+        if ! project_is_installed; then
+          warn "未检测到正在安装的 Web 服务，无需移除。"
+        elif confirm "移除 Web 服务但保留数据？"; then bash "$source/scripts/uninstall.sh"; fi
         pause
         ;;
       2)
-        if confirm "删除 Web 平台、数据库、浏览器 Profile 和账号密码？"; then bash "$source/scripts/uninstall.sh" --purge; fi
+        if ! web_files_present; then
+          warn "未检测到 Web 平台文件，无需删除。"
+        elif confirm "删除 Web 平台、数据库、浏览器 Profile 和账号密码？"; then bash "$source/scripts/uninstall.sh" --purge; fi
         pause
         ;;
       3)
-        if confirm "移除内置 Skill、通知服务和通知目标？"; then bash "$source/scripts/uninstall-openclaw.sh"; fi
+        if [[ ! -f /etc/douyin-fire-desk-openclaw.env ]] && ! skill_installed; then
+          warn "未检测到本项目的 OpenClaw 集成，无需移除。"
+        elif confirm "移除内置 Skill、通知服务和通知目标？"; then bash "$source/scripts/uninstall-openclaw.sh"; fi
         pause
         ;;
       4)
-        if confirm "删除抖音火花运营台的全部数据和 OpenClaw 集成？"; then
+        if ! web_files_present && [[ ! -f /etc/douyin-fire-desk-openclaw.env ]] && ! skill_installed; then
+          warn "未检测到抖音火花运营台组件，无需删除。"
+        elif confirm "删除抖音火花运营台的全部数据和 OpenClaw 集成？"; then
           bash "$source/scripts/uninstall-openclaw.sh"
           bash "$source/scripts/uninstall.sh" --purge
         fi

@@ -44,6 +44,8 @@ curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bo
 
 该命令会先打开 `GONGYU` 终端主菜单。选择 `1` 即可完成后台、依赖、OpenClaw、`douyin-fire-admin` Skill、腾讯微信插件和通知投递器的一键安装；首次只需要完成模型配置，以及微信扫码和接收号配对。
 
+菜单会自动识别已安装组件：重复选择安装项不会覆盖 Web 数据、Cookie 或管理员密码，只会补齐缺失部分。需要更新项目文件时使用 `sudo bash install.sh --force --with-openclaw`。
+
 安装过 Web 平台后，随时在服务器输入以下命令重新打开主菜单：
 
 ```bash

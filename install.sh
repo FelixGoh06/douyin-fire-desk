@@ -14,6 +14,7 @@ PORT="8787"
 OPENCLAW_MODE="ask"
 INSTALL_OPENCLAW=0
 NON_INTERACTIVE=0
+FORCE=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGINAL_ARGS=("$@")
 
@@ -26,6 +27,7 @@ usage() {
   --with-openclaw       自动安装 OpenClaw、微信、Skill 与通知功能
   --without-openclaw    跳过 OpenClaw 集成
   --install-openclaw    未安装时通过官网安装 OpenClaw
+  --force               强制刷新 Web 平台文件和运行时（保留账号、Cookie 与数据库）
   --non-interactive     不询问交互问题；除非指定，否则跳过 OpenClaw
   -h, --help            显示此帮助
 EOF
@@ -40,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --with-openclaw) OPENCLAW_MODE="yes"; INSTALL_OPENCLAW=1; shift ;;
     --without-openclaw) OPENCLAW_MODE="no"; shift ;;
     --install-openclaw) OPENCLAW_MODE="yes"; INSTALL_OPENCLAW=1; shift ;;
+    --force) FORCE=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "未知选项：$1" ;;
@@ -59,6 +62,25 @@ case "${ID:-}" in
   debian|ubuntu) ;;
   *) fail "此安装器仅支持 Debian/Ubuntu。手动部署请阅读 docs/INSTALL.md。" ;;
 esac
+
+web_already_installed() {
+  [[ -f "$ENV_FILE" && -x "$APP_DIR/.venv/bin/python" && -f "/etc/nginx/sites-available/${APP_NAME}" ]] || return 1
+  systemctl is-enabled --quiet "${APP_NAME}.service" 2>/dev/null && systemctl is-active --quiet "${APP_NAME}.service" 2>/dev/null
+}
+
+if web_already_installed && [[ "$FORCE" -eq 0 ]]; then
+  say "检测到 Web 管理平台已安装，已跳过重复安装"
+  if [[ "$OPENCLAW_MODE" == "yes" ]]; then
+    say "仅检查并补齐 OpenClaw 集成"
+    args=(--wechat --auto)
+    [[ "$INSTALL_OPENCLAW" -eq 1 ]] && args+=(--install-openclaw)
+    [[ "$NON_INTERACTIVE" -eq 1 ]] && args+=(--non-interactive)
+    bash "$APP_DIR/scripts/setup-openclaw.sh" "${args[@]}"
+  fi
+  bash "$APP_DIR/scripts/show-admin-credentials.sh"
+  printf '需要刷新 Web 程序时可显式执行：sudo bash %s/install.sh --force\n' "$APP_DIR"
+  exit 0
+fi
 
 say "正在检查必备系统依赖"
 bash "$SCRIPT_DIR/scripts/install-dependencies.sh"

@@ -72,6 +72,24 @@ sudo bash /opt/douyin-fire-desk/scripts/show-admin-credentials.sh
 
 每个二级菜单都可以输入 `0` 返回主菜单。卸载本项目不会删除可供其他程序使用的 OpenClaw 本体、模型配置或无关插件。
 
+### 重复执行菜单时会发生什么
+
+菜单会在每个入口先检查状态，不会把已正常运行的组件再安装一遍：
+
+- 选择 `1` 时，已存在的 Web、Python、Chromium、OpenClaw、模型配置、Gateway、Skill、微信登录和通知接收者都会跳过；仅补齐缺失项。
+- 选择 `2` 时，若 Web 管理平台已经正常安装，会直接显示当前账号、密码和地址，不会覆盖数据库、Cookie 或网页密码。
+- 选择 `4` 时，已安装 OpenClaw 不会重新下载；已配置模型不会再次进入模型向导。Gateway 异常时只尝试修复 Gateway。
+- 选择 `5` 时，已安装且未变更的 Skill 不会重复复制；微信已登录时不会再次要求扫码。若尚未设置通知接收者，只会等待接收微信号发消息完成配对。
+- 选择 `7` 时，只安装缺少的系统包；Python 依赖和 Chromium 完整时也会跳过。
+
+只有需要从仓库更新 Web 程序文件时，才显式使用强制更新命令。它会保留账号、Cookie、数据库和网页端已修改的管理员密码：
+
+```bash
+cd /root/douyin-fire-desk
+git pull
+sudo bash install.sh --force --with-openclaw
+```
+
 ## 不用一条命令时
 
 大陆服务器：
@@ -128,7 +146,7 @@ sudo ufw allow 8787/tcp
 ```bash
 cd /root/douyin-fire-desk
 git pull
-sudo bash install.sh --with-openclaw
+sudo bash install.sh --force --with-openclaw
 ```
 
 卸载服务但保留数据：

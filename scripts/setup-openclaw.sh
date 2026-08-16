@@ -55,7 +55,7 @@ if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK_FILE"
   flock -n 9 || fail "已有另一项 OpenClaw 配置任务正在运行，请等待其结束后重试。"
 fi
-id "$OPENCLAW_USER" >/dev/null 2>&1 || fail "User does not exist: $OPENCLAW_USER"
+id "$OPENCLAW_USER" >/dev/null 2>&1 || fail "OpenClaw 用户不存在：$OPENCLAW_USER"
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"
 [[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME" ]] || fail "无法找到用户 $OPENCLAW_USER 的主目录。"
 
@@ -236,10 +236,14 @@ fi
 SKILL_SOURCE="$APP_DIR/openclaw-skill/douyin-fire-admin"
 SKILL_DIR="$OPENCLAW_HOME/.openclaw/workspace/skills/douyin-fire-admin"
 [[ -d "$SKILL_SOURCE" ]] || fail "缺少内置 Skill：$SKILL_SOURCE"
-say "正在安装 douyin-fire-admin Skill"
-install -d -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" -m 0755 "$(dirname "$SKILL_DIR")"
-rsync -a --delete --exclude '__pycache__/' "$SKILL_SOURCE/" "$SKILL_DIR/"
-chown -R "$OPENCLAW_USER:$OPENCLAW_USER" "$SKILL_DIR"
+if [[ -d "$SKILL_DIR" ]] && diff -qr --exclude='__pycache__' --exclude='*.pyc' "$SKILL_SOURCE" "$SKILL_DIR" >/dev/null 2>&1; then
+  note "douyin-fire-admin Skill 已是最新版本，已跳过重复安装。"
+else
+  say "正在安装或更新 douyin-fire-admin Skill"
+  install -d -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" -m 0755 "$(dirname "$SKILL_DIR")"
+  rsync -a --delete --exclude '__pycache__/' "$SKILL_SOURCE/" "$SKILL_DIR/"
+  chown -R "$OPENCLAW_USER:$OPENCLAW_USER" "$SKILL_DIR"
+fi
 chmod 0755 "$SKILL_DIR/scripts/notify-openclaw-loop.sh"
 
 channel="$(get_env_value OPENCLAW_CHANNEL "$OPENCLAW_ENV_FILE")"

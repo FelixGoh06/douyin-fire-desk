@@ -39,6 +39,8 @@ if [[ -z "$OPENCLAW_COMMAND" ]]; then
   run_as_openclaw bash -lc 'curl --proto "=https" --tlsv1.2 -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard --no-prompt'
   OPENCLAW_COMMAND="$(find_openclaw || true)"
   [[ -n "$OPENCLAW_COMMAND" ]] || { printf '安装后未找到 OpenClaw 命令。\n' >&2; exit 1; }
+else
+  printf '已检测到 OpenClaw，已跳过重复下载安装。\n'
 fi
 
 if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
@@ -51,6 +53,8 @@ if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
     onboarding+=(--skip-daemon --skip-health)
   fi
   run_as_openclaw env OPENCLAW_LOCALE=zh-CN "$OPENCLAW_COMMAND" "${onboarding[@]}"
+else
+  printf '模型配置已存在，已跳过重复配置。\n'
 fi
 
 if [[ -d /run/systemd/system ]] && systemctl show-environment >/dev/null 2>&1; then
