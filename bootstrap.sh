@@ -51,8 +51,10 @@ esac
 cd "$target"
 # `curl ... | sudo bash` gives this bootstrap script a pipe as stdin. Reconnect
 # the interactive GONGYU menu to the caller's terminal before opening it.
-if [[ -r /dev/tty ]]; then
+# Some cloud terminal implementations expose /dev/tty without reporting it as
+# readable to `[[ -r ]]`, so test opening it rather than inspecting permissions.
+if { true </dev/tty; } 2>/dev/null; then
   exec bash gongyu.sh </dev/tty
 fi
-printf 'A terminal is required for the GONGYU menu. Run this command from an SSH terminal.\n' >&2
-exit 1
+printf '\nGONGYU was downloaded, but this terminal does not expose interactive input.\n'
+printf 'Open the menu manually with:\n  cd %s && bash gongyu.sh\n' "$target"

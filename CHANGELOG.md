@@ -2,9 +2,10 @@
 
 ## v1.0.14
 
-- Added the `GONGYU` interactive terminal entry point. After Web installation, run `sudo gongyu` to open the numbered menu for full/Web-only installation, component cleanup, OpenClaw setup, plugin setup, credential display, dependency repair, and diagnostics.
+- Added the `GONGYU` interactive terminal entry point. After Web installation, run `gongyu` to open the numbered menu for full/Web-only installation, component cleanup, OpenClaw setup, plugin setup, credential display, dependency repair, and diagnostics.
 - Made the one-line bootstrap command open the GONGYU menu by default instead of immediately starting a fixed installation path.
 - Added missing-package checks, a standalone official OpenClaw runtime installer, and scoped OpenClaw-integration cleanup.
+- Improved cloud-terminal compatibility by reopening `/dev/tty` directly before showing the menu and printing a manual menu command when no interactive terminal is available.
 
 ## v1.0.13
 
