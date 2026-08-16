@@ -7,6 +7,7 @@
 - The official WeChat plugin installer now owns first-time QR login; the setup no longer invokes a second channel-login QR immediately afterward.
 - Receiver pairing now waits automatically for three minutes after login, without requiring an extra terminal Enter keypress.
 - Added a single-run lock so a second setup command cannot race an active pairing window or overwrite its notification recipient.
+- Made the receiver-pairing timeout a real three-minute deadline, including time spent querying the channel.
 
 ## v1.0.12
 

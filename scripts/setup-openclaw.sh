@@ -180,8 +180,8 @@ discover_wechat_recipient() {
 }
 
 wait_for_wechat_recipient() {
-  local attempt
-  for attempt in $(seq 1 36); do
+  local deadline=$((SECONDS + 180))
+  while (( SECONDS < deadline )); do
     if discover_wechat_recipient; then
       return 0
     fi
