@@ -67,7 +67,10 @@ else
 fi
 
 if systemd_available; then
+  systemctl stop "${GATEWAY_SERVICE_NAME}.service" 2>/dev/null || true
   run_as_openclaw systemctl --user disable --now openclaw-gateway.service >/dev/null 2>&1 || true
+  pkill -TERM -u "$OPENCLAW_USER" -f '(^|/)openclaw-gateway($| )' 2>/dev/null || true
+  sleep 1
   cat > "/etc/systemd/system/${GATEWAY_SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Douyin Fire Desk OpenClaw Gateway

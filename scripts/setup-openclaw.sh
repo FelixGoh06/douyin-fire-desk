@@ -115,7 +115,12 @@ wechat_plugin_installed() {
 
 install_gateway_service() {
   if systemd_available; then
+    systemctl stop "${GATEWAY_SERVICE_NAME}.service" 2>/dev/null || true
     run_as_openclaw systemctl --user disable --now openclaw-gateway.service >/dev/null 2>&1 || true
+    # A first-time WeChat login can leave a temporary foreground gateway tied
+    # to the SSH terminal. Stop only that gateway process before taking over.
+    pkill -TERM -u "$OPENCLAW_USER" -f '(^|/)openclaw-gateway($| )' 2>/dev/null || true
+    sleep 1
     cat > "/etc/systemd/system/${GATEWAY_SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Douyin Fire Desk OpenClaw Gateway
@@ -154,16 +159,18 @@ start_container_gateway() {
 }
 
 ensure_gateway() {
-  gateway_status && return 0
   if systemd_available; then
-    say "正在启动受系统 systemd 管理的 OpenClaw Gateway"
-    install_gateway_service
+    if ! systemctl is-active --quiet "${GATEWAY_SERVICE_NAME}.service"; then
+      say "正在启动受系统 systemd 管理的 OpenClaw Gateway"
+      install_gateway_service
+    fi
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
     done
     fail "Gateway 不可用。请执行：systemctl status ${GATEWAY_SERVICE_NAME}.service --no-pager"
   else
+    gateway_status && return 0
     start_container_gateway
   fi
 }
@@ -171,7 +178,12 @@ ensure_gateway() {
 restart_gateway_after_channel_login() {
   if systemd_available; then
     say "微信登录完成，正在重载 Gateway"
-    systemctl restart "${GATEWAY_SERVICE_NAME}.service"
+    if systemctl cat "${GATEWAY_SERVICE_NAME}.service" >/dev/null 2>&1; then
+      systemctl restart "${GATEWAY_SERVICE_NAME}.service"
+    else
+      note "首次接入，正在创建 Gateway 系统服务。"
+      install_gateway_service
+    fi
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
