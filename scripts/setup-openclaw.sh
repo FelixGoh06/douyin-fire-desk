@@ -9,6 +9,7 @@ AGENT_GROUP="douyin-fire-agent"
 OPENCLAW_ENV_FILE="/etc/douyin-fire-desk-openclaw.env"
 SERVICE_NAME="douyin-fire-openclaw-notify"
 RUNTIME_DIR="/var/lib/douyin-fire-desk/openclaw-runtime"
+LOCK_FILE="/run/lock/douyin-fire-desk-openclaw-setup.lock"
 INSTALL_OPENCLAW=0
 NON_INTERACTIVE=0
 AUTO_SETUP=0
@@ -50,6 +51,10 @@ done
 [[ "$EUID" -eq 0 ]] || fail "Run this script with sudo or as root."
 [[ -f "$ENV_FILE" ]] || fail "Install Douyin Fire Desk first: sudo bash install.sh"
 [[ -f "$AGENT_ENV_FILE" ]] || fail "Agent configuration is missing. Re-run sudo bash install.sh first."
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || fail "Another OpenClaw setup is already running. Wait for it to finish, then retry."
+fi
 id "$OPENCLAW_USER" >/dev/null 2>&1 || fail "User does not exist: $OPENCLAW_USER"
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"
 [[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME" ]] || fail "Could not locate the home directory for $OPENCLAW_USER"
