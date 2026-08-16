@@ -7,15 +7,15 @@ APP_DIR="/opt/douyin-fire-desk"
 ENV_FILE="/etc/douyin-fire-desk.env"
 DEFAULT_PORT="8787"
 
-if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
-  BOLD="$(tput bold)"
-  DIM="$(tput dim)"
-  RESET="$(tput sgr0)"
-  CYAN="$(tput setaf 6)"
-  BLUE="$(tput setaf 4)"
-  GREEN="$(tput setaf 2)"
-  YELLOW="$(tput setaf 3)"
-  RED="$(tput setaf 1)"
+if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && tput sgr0 >/dev/null 2>&1; then
+  BOLD="$(tput bold 2>/dev/null || true)"
+  DIM="$(tput dim 2>/dev/null || true)"
+  RESET="$(tput sgr0 2>/dev/null || true)"
+  CYAN="$(tput setaf 6 2>/dev/null || true)"
+  BLUE="$(tput setaf 4 2>/dev/null || true)"
+  GREEN="$(tput setaf 2 2>/dev/null || true)"
+  YELLOW="$(tput setaf 3 2>/dev/null || true)"
+  RED="$(tput setaf 1 2>/dev/null || true)"
 else
   BOLD=""; DIM=""; RESET=""; CYAN=""; BLUE=""; GREEN=""; YELLOW=""; RED=""
 fi
@@ -26,7 +26,7 @@ warn() { printf '%s%s%s\n' "$YELLOW" "$*" "$RESET"; }
 error() { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; }
 
 draw_header() {
-  if [[ -t 1 ]]; then clear; fi
+  if [[ -t 1 ]]; then clear 2>/dev/null || true; fi
   printf '%s' "$CYAN$BOLD"
   cat <<'EOF'
 

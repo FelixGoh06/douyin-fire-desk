@@ -6,6 +6,7 @@
 - Made the one-line bootstrap command open the GONGYU menu by default instead of immediately starting a fixed installation path.
 - Added missing-package checks, a standalone official OpenClaw runtime installer, and scoped OpenClaw-integration cleanup.
 - Improved cloud-terminal compatibility by reopening `/dev/tty` directly before showing the menu and printing a manual menu command when no interactive terminal is available.
+- Made terminal colors and screen clearing optional so cloud consoles without a usable `TERM` value still show the plain-text menu.
 
 ## v1.0.13
 
