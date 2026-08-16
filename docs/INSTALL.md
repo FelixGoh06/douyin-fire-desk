@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/FelixGoh06/douyin-fire-desk/main/bo
 
 1. **模型配置**：在 OpenClaw 菜单选择模型提供商，填写 API Key、Base URL 与模型 ID。自定义 OpenAI 兼容模型选择 `Custom Provider` -> `OpenAI-compatible`。
 2. **微信扫码**：按终端二维码登录专用 OpenClaw 微信号。
-3. **接收号配对**：用你的接收微信号给刚登录的 OpenClaw 微信号发送任意一条消息；终端提示后按 Enter。安装器会识别该接收号、完成配对，并将它设为自动汇报对象。
+3. **接收号配对**：用你的接收微信号给刚登录的 OpenClaw 微信号发送任意一条消息。安装器会自动等待 3 分钟、识别该接收号、完成配对，并将它设为自动汇报对象；不需要回终端按 Enter。
 
 接收号配对不能被静默跳过：系统必须确认谁有权执行续火、读取状态和接收 Cookie 告警，不能把控制权限自动交给任意陌生人。
 

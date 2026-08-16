@@ -176,7 +176,7 @@ discover_wechat_recipient() {
 
 wait_for_wechat_recipient() {
   local attempt
-  for attempt in $(seq 1 18); do
+  for attempt in $(seq 1 36); do
     if discover_wechat_recipient; then
       return 0
     fi
@@ -250,8 +250,7 @@ if [[ "$WITH_WECHAT" -eq 1 ]]; then
   channel="openclaw-weixin"
   if [[ -z "$target" && "$NON_INTERACTIVE" -eq 0 ]]; then
     note "From the receiving WeChat account, send any message to the account just connected."
-    read -r -p "After sending the message, press Enter to bind that receiver automatically: " _
-    note "Waiting up to 90 seconds for the receiver pairing request."
+    note "Waiting up to 3 minutes for the receiver pairing request; no terminal input is needed."
     if wait_for_wechat_recipient; then
       note "WeChat receiver bound automatically."
     else
