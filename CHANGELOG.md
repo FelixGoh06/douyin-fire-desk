@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.3 - 2026-08-16
+
+- Replaced the installation-document placeholder with the live GitHub clone URL.
+
 ## v1.0.2 - 2026-08-15
 
 - Moved administrator password management to a consistent sidebar action and modal dialog.

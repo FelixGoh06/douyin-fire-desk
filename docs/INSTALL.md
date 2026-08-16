@@ -23,12 +23,12 @@ ssh root@你的服务器IP
 
 ## 2. 下载项目
 
-在服务器执行下面三行。将 `YOUR_GITHUB_NAME` 替换为发布本项目的 GitHub 用户名或组织名：
+在服务器执行下面三行，可直接复制：
 
 ```bash
 apt-get update
 apt-get install -y git
-git clone https://github.com/YOUR_GITHUB_NAME/douyin-fire-desk.git
+git clone https://github.com/FelixGoh06/douyin-fire-desk.git
 ```
 
 进入目录：

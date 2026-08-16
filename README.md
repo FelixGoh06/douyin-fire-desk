@@ -32,7 +32,7 @@ Douyin Fire Desk 将浏览器自动化、任务调度和通知集中到一台 Li
 2. SSH 登录 Debian/Ubuntu 服务器，执行：
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_NAME/douyin-fire-desk.git
+git clone https://github.com/FelixGoh06/douyin-fire-desk.git
 cd douyin-fire-desk
 sudo bash install.sh
 ```
