@@ -29,10 +29,20 @@ Douyin Fire Desk 将浏览器自动化、任务调度和通知集中到一台 Li
 ## 3 分钟安装
 
 1. 在云厂商安全组/防火墙中放行 TCP `8787`（也可换成其他端口）。
-2. SSH 登录 Debian/Ubuntu 服务器，执行：
+2. SSH 登录 Debian/Ubuntu 服务器，按服务器所在地执行：
+
+**中国大陆服务器（推荐 Gitee）：**
 
 ```bash
-git clone https://github.com/FelixGoh06/douyin-fire-desk.git
+git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
+cd douyin-fire-desk
+sudo bash install.sh
+```
+
+**海外服务器（GitHub）：**
+
+```bash
+git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
 cd douyin-fire-desk
 sudo bash install.sh
 ```

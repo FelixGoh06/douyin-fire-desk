@@ -23,12 +23,20 @@ ssh root@你的服务器IP
 
 ## 2. 下载项目
 
-在服务器执行下面三行，可直接复制：
+中国大陆服务器优先使用 Gitee，避免 GitHub TLS 连接不稳定：
 
 ```bash
 apt-get update
 apt-get install -y git
-git clone https://github.com/FelixGoh06/douyin-fire-desk.git
+git clone --depth 1 https://gitee.com/gongyu2006/douyin-fire-desk.git
+```
+
+海外服务器使用 GitHub：
+
+```bash
+apt-get update
+apt-get install -y git
+git clone --depth 1 https://github.com/FelixGoh06/douyin-fire-desk.git
 ```
 
 进入目录：
@@ -44,6 +52,8 @@ cd douyin-fire-desk
 git pull
 sudo bash install.sh
 ```
+
+Gitee 是 GitHub 的国内镜像。若两个仓库版本暂时不同，以 GitHub Release 的版本号为准，等待自动镜像同步后再更新国内服务器。
 
 ## 3. 一键安装
 

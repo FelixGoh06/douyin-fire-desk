@@ -1,0 +1,25 @@
+name: Sync Gitee Mirror
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push main branch and tags to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          test -n "$GITEE_TOKEN"
+          git config --global credential.helper store
+          printf 'https://gongyu2006:%s@gitee.com\n' "$GITEE_TOKEN" > ~/.git-credentials
+          git remote add gitee https://gitee.com/gongyu2006/douyin-fire-desk.git
+          git push --force gitee refs/heads/main:refs/heads/main
+          git push --force gitee --tags

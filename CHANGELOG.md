@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.4 - 2026-08-16
+
+- Added a Gitee-first installation path for mainland China servers and a GitHub Actions workflow for mirror synchronization.
+
 ## v1.0.3 - 2026-08-16
 
 - Replaced the installation-document placeholder with the live GitHub clone URL.
