@@ -3,7 +3,7 @@ set -euo pipefail
 
 PURGE=0
 [[ "${1:-}" == "--purge" ]] && PURGE=1
-[[ "$EUID" -eq 0 ]] || { printf 'Run with sudo.\n' >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 或 root 运行。\n' >&2; exit 1; }
 
 systemctl disable --now douyin-fire-openclaw-notify.timer 2>/dev/null || true
 systemctl disable --now douyin-fire-desk.service 2>/dev/null || true
@@ -22,7 +22,7 @@ if [[ "$PURGE" -eq 1 ]]; then
   rm -f /etc/douyin-fire-desk.env /etc/douyin-fire-desk-agent.env /etc/douyin-fire-desk-openclaw.env
   rm -f /etc/sudoers.d/douyin-fire-desk-password /usr/local/bin/gongyu
   rm -rf /usr/local/lib/douyin-fire-desk
-  printf 'Application, profiles, database, and configuration removed.\n'
+  printf '应用文件、浏览器 Profile、数据库和配置已删除。\n'
 else
-  printf 'Service removed. Data and secrets were kept. Use --purge to delete them too.\n'
+  printf '服务已移除，数据和密钥已保留。使用 --purge 可一并删除。\n'
 fi

@@ -5,8 +5,8 @@ set -euo pipefail
 ENV_FILE="/etc/douyin-fire-desk.env"
 NGINX_FILE="/etc/nginx/sites-enabled/douyin-fire-desk"
 
-[[ "$EUID" -eq 0 ]] || { printf 'Run with sudo: sudo bash scripts/show-admin-credentials.sh\n' >&2; exit 1; }
-[[ -f "$ENV_FILE" ]] || { printf 'Configuration not found: %s\n' "$ENV_FILE" >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 运行：sudo bash scripts/show-admin-credentials.sh\n' >&2; exit 1; }
+[[ -f "$ENV_FILE" ]] || { printf '未找到配置文件：%s\n' "$ENV_FILE" >&2; exit 1; }
 
 read_value() {
   local key="$1"
@@ -42,14 +42,14 @@ port="${port:-8787}"
 public_ip="$(detect_public_ipv4 || true)"
 local_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 
-printf 'Admin username: %s\n' "${username:-admin}"
-printf 'Admin password: %s\n' "$password"
+printf '管理员用户名：%s\n' "${username:-admin}"
+printf '管理员密码：%s\n' "$password"
 if [[ -n "$public_ip" ]]; then
-  printf 'Web address: http://%s:%s\n' "$public_ip" "$port"
+  printf '网页访问地址：http://%s:%s\n' "$public_ip" "$port"
 elif [[ -n "$local_ip" ]]; then
-  printf 'Web address: http://YOUR_SERVER_PUBLIC_IP:%s\n' "$port"
-  printf 'Local address detected: http://%s:%s (do not use this from outside the server)\n' "$local_ip" "$port"
+  printf '网页访问地址：http://你的服务器公网IP:%s\n' "$port"
+  printf '检测到内网地址：http://%s:%s（不能在服务器外部直接使用）\n' "$local_ip" "$port"
 else
-  printf 'Web address: http://YOUR_SERVER_PUBLIC_IP:%s\n' "$port"
+  printf '网页访问地址：http://你的服务器公网IP:%s\n' "$port"
 fi
-printf '\nKeep this output private. Do not send the password in screenshots, chat, or Issues.\n'
+printf '\n请妥善保存以上信息，不要在截图、聊天记录或 Issues 中泄露管理员密码。\n'

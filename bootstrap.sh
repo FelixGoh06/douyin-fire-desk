@@ -9,9 +9,9 @@ SOURCE="auto"
 
 usage() {
   cat <<'EOF'
-Usage: bash bootstrap.sh [--gitee|--github]
+用法：bash bootstrap.sh [--gitee|--github]
 
-The default source tries Gitee first, then GitHub, then opens the GONGYU menu.
+默认优先使用 Gitee，失败后使用 GitHub，然后打开 GONGYU 菜单。
 EOF
 }
 
@@ -20,22 +20,22 @@ while [[ $# -gt 0 ]]; do
     --gitee) SOURCE="gitee"; shift ;;
     --github) SOURCE="github"; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 1 ;;
+    *) printf '未知选项：%s\n' "$1" >&2; usage >&2; exit 1 ;;
   esac
 done
 
-[[ -f /etc/os-release ]] || { printf 'Only Debian/Ubuntu hosts are supported.\n' >&2; exit 1; }
+[[ -f /etc/os-release ]] || { printf '仅支持 Debian/Ubuntu 服务器。\n' >&2; exit 1; }
 . /etc/os-release
-case "${ID:-}" in debian|ubuntu) ;; *) printf 'Only Debian/Ubuntu hosts are supported.\n' >&2; exit 1 ;; esac
+case "${ID:-}" in debian|ubuntu) ;; *) printf '仅支持 Debian/Ubuntu 服务器。\n' >&2; exit 1 ;; esac
 
-[[ "$EUID" -eq 0 ]] || { printf 'Run this bootstrap as root: curl ... | sudo bash\n' >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || { printf '请以 root 运行启动脚本：curl ... | sudo bash\n' >&2; exit 1; }
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y ca-certificates curl git
 
 target="/root/${REPO_NAME}"
-[[ ! -e "$target" ]] || { printf 'Directory already exists: %s\nUpdate it there, then rerun install.sh.\n' "$target" >&2; exit 1; }
+[[ ! -e "$target" ]] || { printf '目录已存在：%s\n请在该目录更新后重新运行 gongyu.sh。\n' "$target" >&2; exit 1; }
 
 clone() {
   local url="$1"
@@ -56,5 +56,5 @@ cd "$target"
 if { true </dev/tty; } 2>/dev/null; then
   exec bash gongyu.sh </dev/tty
 fi
-printf '\nGONGYU was downloaded, but this terminal does not expose interactive input.\n'
-printf 'Open the menu manually with:\n  cd %s && bash gongyu.sh\n' "$target"
+printf '\nGONGYU 已下载，但当前终端不支持交互输入。\n'
+printf '请手动打开菜单：\n  cd %s && bash gongyu.sh\n' "$target"

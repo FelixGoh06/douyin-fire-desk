@@ -7,18 +7,18 @@ case "${1:-}" in
   "") ;;
   --with-runtime) WITH_RUNTIME=1 ;;
   -h|--help)
-    printf 'Usage: sudo bash scripts/install-dependencies.sh [--with-runtime]\n'
+    printf '用法：sudo bash scripts/install-dependencies.sh [--with-runtime]\n'
     exit 0
     ;;
-  *) printf 'Unknown option: %s\n' "$1" >&2; exit 1 ;;
+  *) printf '未知选项：%s\n' "$1" >&2; exit 1 ;;
 esac
-[[ "$EUID" -eq 0 ]] || { printf 'Run with sudo or as root.\n' >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 或 root 运行。\n' >&2; exit 1; }
 
 # shellcheck disable=SC1091
 . /etc/os-release
 case "${ID:-}" in
   debian|ubuntu) ;;
-  *) printf 'Only Debian and Ubuntu are supported.\n' >&2; exit 1 ;;
+  *) printf '仅支持 Debian 和 Ubuntu。\n' >&2; exit 1 ;;
 esac
 
 packages=(ca-certificates curl git nginx openssl python3 python3-pip python3-venv rsync sudo xvfb)
@@ -28,19 +28,19 @@ for package in "${packages[@]}"; do
 done
 
 if (( ${#missing[@]} )); then
-  printf 'Installing missing system packages: %s\n' "${missing[*]}"
+  printf '正在安装缺失的系统依赖：%s\n' "${missing[*]}"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
   apt-get install -y "${missing[@]}"
 else
-  printf 'All required system packages are already installed.\n'
+  printf '全部必备系统依赖均已安装。\n'
 fi
 
 if [[ "$WITH_RUNTIME" -eq 1 && -x /opt/douyin-fire-desk/.venv/bin/python ]]; then
-  printf 'Refreshing installed Python dependencies and Chromium runtime.\n'
+  printf '正在刷新已安装的 Python 依赖与 Chromium 运行时。\n'
   app_dir="/opt/douyin-fire-desk"
   "$app_dir/.venv/bin/pip" install -r "$app_dir/requirements.txt"
   PLAYWRIGHT_BROWSERS_PATH="$app_dir/.playwright" "$app_dir/.venv/bin/python" -m playwright install --with-deps chromium
 elif [[ "$WITH_RUNTIME" -eq 1 ]]; then
-  printf 'System dependencies are ready. Install the Web platform to create its isolated Python and Chromium runtime.\n'
+  printf '系统依赖已就绪。安装 Web 管理平台后会自动创建独立的 Python 与 Chromium 运行时。\n'
 fi

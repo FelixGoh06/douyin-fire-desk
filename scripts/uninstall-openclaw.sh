@@ -8,7 +8,7 @@ SERVICE_NAME="${APP_NAME}-openclaw-notify"
 OPENCLAW_USER="${SUDO_USER:-${USER:-root}}"
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" 2>/dev/null | cut -d: -f6 || true)"
 
-[[ "$EUID" -eq 0 ]] || { printf 'Run with sudo or as root.\n' >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || { printf '请使用 sudo 或 root 运行。\n' >&2; exit 1; }
 
 systemctl disable --now "${SERVICE_NAME}.timer" 2>/dev/null || true
 rm -f "/etc/systemd/system/${SERVICE_NAME}.service" "/etc/systemd/system/${SERVICE_NAME}.timer" "$ENV_FILE"
@@ -18,4 +18,4 @@ if [[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME/.openclaw/workspace/skills/douyi
   rm -rf "$OPENCLAW_HOME/.openclaw/workspace/skills/douyin-fire-admin"
 fi
 
-printf 'Removed Douyin Fire Desk OpenClaw integration. The OpenClaw runtime, model configuration, and any unrelated plugins were kept.\n'
+printf '已移除抖音火花运营台的 OpenClaw 集成。OpenClaw 本体、模型配置和无关插件均已保留。\n'

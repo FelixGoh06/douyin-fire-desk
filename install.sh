@@ -19,20 +19,20 @@ ORIGINAL_ARGS=("$@")
 
 usage() {
   cat <<'EOF'
-Usage: sudo bash install.sh [options]
+用法：sudo bash install.sh [选项]
 
-Options:
-  --port PORT           Public web port (default: 8787)
-  --with-openclaw       Automatically install OpenClaw, WeChat, Skill, and reports
-  --without-openclaw    Skip OpenClaw integration
-  --install-openclaw    Install OpenClaw through its official installer when absent
-  --non-interactive     Do not ask questions; OpenClaw is skipped unless requested
-  -h, --help            Show this help
+选项：
+  --port PORT           公网 Web 端口（默认 8787）
+  --with-openclaw       自动安装 OpenClaw、微信、Skill 与通知功能
+  --without-openclaw    跳过 OpenClaw 集成
+  --install-openclaw    未安装时通过官网安装 OpenClaw
+  --non-interactive     不询问交互问题；除非指定，否则跳过 OpenClaw
+  -h, --help            显示此帮助
 EOF
 }
 
 say() { printf '\n==> %s\n' "$*"; }
-fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
+fail() { printf '\n错误：%s\n' "$*" >&2; exit 1; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -42,25 +42,25 @@ while [[ $# -gt 0 ]]; do
     --install-openclaw) OPENCLAW_MODE="yes"; INSTALL_OPENCLAW=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) fail "Unknown option: $1" ;;
+    *) fail "未知选项：$1" ;;
   esac
 done
 
-[[ "$PORT" =~ ^[0-9]{2,5}$ ]] && (( PORT >= 1 && PORT <= 65535 )) || fail "--port must be 1-65535"
-[[ -f "${SCRIPT_DIR}/run.py" ]] || fail "Run this script from the cloned project directory."
+[[ "$PORT" =~ ^[0-9]{2,5}$ ]] && (( PORT >= 1 && PORT <= 65535 )) || fail "--port 必须在 1 到 65535 之间。"
+[[ -f "${SCRIPT_DIR}/run.py" ]] || fail "请在克隆后的项目目录中运行此脚本。"
 
 if [[ "${EUID}" -ne 0 ]]; then
-  command -v sudo >/dev/null 2>&1 || fail "Please run as root, or install sudo first."
+  command -v sudo >/dev/null 2>&1 || fail "请使用 root 运行，或先安装 sudo。"
   exec sudo -E bash "$0" "${ORIGINAL_ARGS[@]}"
 fi
 
 source /etc/os-release
 case "${ID:-}" in
   debian|ubuntu) ;;
-  *) fail "Only Debian and Ubuntu are supported by this installer. See docs/INSTALL.md for manual deployment." ;;
+  *) fail "此安装器仅支持 Debian/Ubuntu。手动部署请阅读 docs/INSTALL.md。" ;;
 esac
 
-say "Checking required system packages"
+say "正在检查必备系统依赖"
 bash "$SCRIPT_DIR/scripts/install-dependencies.sh"
 
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
@@ -70,7 +70,7 @@ if ! getent group "$AGENT_GROUP" >/dev/null 2>&1; then
   groupadd --system "$AGENT_GROUP"
 fi
 
-say "Installing application files"
+say "正在安装应用文件"
 install -d -m 0755 "$APP_DIR"
 if [[ "$(readlink -f "$SCRIPT_DIR")" != "$(readlink -f "$APP_DIR")" ]]; then
   rsync -a --delete \
@@ -78,18 +78,18 @@ if [[ "$(readlink -f "$SCRIPT_DIR")" != "$(readlink -f "$APP_DIR")" ]]; then
     --exclude '.pytest_cache/' --exclude 'data/' --exclude '*.db' \
     "${SCRIPT_DIR}/" "${APP_DIR}/"
 else
-  say "Using the installed application files"
+  say "正在使用已安装的应用文件"
 fi
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$DATA_DIR" "$PROFILE_DIR"
 
-say "Installing Python dependencies and Chromium"
+say "正在安装 Python 依赖与 Chromium"
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/pip" install --upgrade pip wheel
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 PLAYWRIGHT_BROWSERS_PATH="$APP_DIR/.playwright" "$APP_DIR/.venv/bin/python" -m playwright install --with-deps chromium
 
 if [[ ! -f "$ENV_FILE" ]]; then
-  say "Generating first-run secrets"
+  say "正在生成首次运行密钥"
   admin_password="$(openssl rand -base64 24 | tr -d '\n')"
   session_secret="$(openssl rand -hex 32)"
   cookie_key="$("$APP_DIR/.venv/bin/python" -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
@@ -122,7 +122,7 @@ EOF
   chmod 0640 "$AGENT_ENV_FILE"
 else
   admin_password=""
-  say "Keeping existing configuration at ${ENV_FILE}"
+  say "保留已有配置：${ENV_FILE}"
 fi
 
 install -d -m 0755 /usr/local/lib/douyin-fire-desk
@@ -134,7 +134,7 @@ visudo -cf /etc/sudoers.d/douyin-fire-desk-password
 
 if [[ ! -f "$AGENT_ENV_FILE" ]]; then
   agent_token="$(grep -m1 '^AGENT_API_TOKEN=' "$ENV_FILE" | cut -d= -f2- || true)"
-  [[ -n "$agent_token" ]] || fail "AGENT_API_TOKEN is missing from ${ENV_FILE}"
+  [[ -n "$agent_token" ]] || fail "${ENV_FILE} 中缺少 AGENT_API_TOKEN"
   printf 'OPENCLAW_BASE_URL=http://127.0.0.1:7788\nAGENT_API_TOKEN=%s\n' "$agent_token" > "$AGENT_ENV_FILE"
   chown root:"$AGENT_GROUP" "$AGENT_ENV_FILE"
   chmod 0640 "$AGENT_ENV_FILE"
@@ -159,7 +159,7 @@ systemctl enable --now nginx
 systemctl reload nginx
 
 if [[ "$OPENCLAW_MODE" == "ask" && "$NON_INTERACTIVE" -eq 0 ]]; then
-  read -r -p "Connect OpenClaw now? [y/N] " answer
+  read -r -p "现在接入 OpenClaw？[y/N] " answer
   [[ "$answer" =~ ^[Yy]$ ]] && OPENCLAW_MODE="yes" || OPENCLAW_MODE="no"
 fi
 if [[ "$OPENCLAW_MODE" == "yes" ]]; then
@@ -169,9 +169,9 @@ if [[ "$OPENCLAW_MODE" == "yes" ]]; then
   bash "$APP_DIR/scripts/setup-openclaw.sh" "${args[@]}"
 fi
 
-say "Installation complete"
+say "安装完成"
 bash "$APP_DIR/scripts/show-admin-credentials.sh"
-printf 'Show the credentials again: sudo bash %s/scripts/show-admin-credentials.sh\n' "$APP_DIR"
-printf 'Open the management script: gongyu\n'
-printf 'Service check: systemctl status %s\n' "$APP_NAME"
-printf 'Cloud security groups/firewalls must allow TCP %s.\n' "$PORT"
+printf '再次查看账号密码：sudo bash %s/scripts/show-admin-credentials.sh\n' "$APP_DIR"
+printf '打开管理脚本：gongyu\n'
+printf '检查服务状态：systemctl status %s\n' "$APP_NAME"
+printf '请在云安全组和防火墙中放行 TCP %s。\n' "$PORT"

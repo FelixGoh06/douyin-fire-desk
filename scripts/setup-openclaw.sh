@@ -19,19 +19,19 @@ OPENCLAW_USER="${SUDO_USER:-${USER:-root}}"
 
 say() { printf '\n==> %s\n' "$*"; }
 note() { printf '%s\n' "$*"; }
-fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
+fail() { printf '\n错误：%s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Usage: sudo bash scripts/setup-openclaw.sh [options]
+用法：sudo bash scripts/setup-openclaw.sh [选项]
 
-Options:
-  --install-openclaw  Install OpenClaw from the official installer when absent
-  --wechat            Install the Tencent WeChat plugin and open QR login
-  --auto              Use the guided model setup, then complete safe local steps automatically
-  --notify-target ID  Set an already-known notification recipient id
-  --user USER         Linux user that owns OpenClaw (default: invoking user)
-  --non-interactive   Do not ask generic channel questions
+选项：
+  --install-openclaw  未安装时通过官网安装 OpenClaw
+  --wechat            安装腾讯微信插件并显示扫码登录
+  --auto              使用引导式模型配置，其余本地步骤自动完成
+  --notify-target ID  设置已知的通知接收者 ID
+  --user USER         OpenClaw 所属 Linux 用户（默认当前调用用户）
+  --non-interactive   不询问通用频道配置问题
 EOF
 }
 
@@ -44,20 +44,20 @@ while [[ $# -gt 0 ]]; do
     --user) OPENCLAW_USER="${2:-}"; shift 2 ;;
     --non-interactive) NON_INTERACTIVE=1; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) fail "Unknown option: $1" ;;
+    *) fail "未知选项：$1" ;;
   esac
 done
 
-[[ "$EUID" -eq 0 ]] || fail "Run this script with sudo or as root."
-[[ -f "$ENV_FILE" ]] || fail "Install Douyin Fire Desk first: sudo bash install.sh"
-[[ -f "$AGENT_ENV_FILE" ]] || fail "Agent configuration is missing. Re-run sudo bash install.sh first."
+[[ "$EUID" -eq 0 ]] || fail "请使用 sudo 或 root 运行此脚本。"
+[[ -f "$ENV_FILE" ]] || fail "请先安装抖音火花运营台：sudo bash install.sh"
+[[ -f "$AGENT_ENV_FILE" ]] || fail "缺少 Agent 配置，请先重新运行 sudo bash install.sh。"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK_FILE"
-  flock -n 9 || fail "Another OpenClaw setup is already running. Wait for it to finish, then retry."
+  flock -n 9 || fail "已有另一项 OpenClaw 配置任务正在运行，请等待其结束后重试。"
 fi
 id "$OPENCLAW_USER" >/dev/null 2>&1 || fail "User does not exist: $OPENCLAW_USER"
 OPENCLAW_HOME="$(getent passwd "$OPENCLAW_USER" | cut -d: -f6)"
-[[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME" ]] || fail "Could not locate the home directory for $OPENCLAW_USER"
+[[ -n "$OPENCLAW_HOME" && -d "$OPENCLAW_HOME" ]] || fail "无法找到用户 $OPENCLAW_USER 的主目录。"
 
 systemd_available() {
   [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1 && systemctl show-environment >/dev/null 2>&1
@@ -110,23 +110,23 @@ start_container_gateway() {
     return 0
   fi
   install -d -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" -m 0750 "$RUNTIME_DIR"
-  say "Starting the OpenClaw Gateway without systemd"
+  say "当前环境没有 systemd，正在启动 OpenClaw Gateway 后台进程"
   run_as_openclaw bash -lc "nohup $(printf '%q' "$OPENCLAW_COMMAND") gateway > $(printf '%q' "$log_file") 2>&1 & echo \$! > $(printf '%q' "$pid_file")"
   sleep 3
-  gateway_status || fail "Gateway did not start. Read $log_file"
+  gateway_status || fail "Gateway 启动失败，请查看日志：$log_file"
 }
 
 ensure_gateway() {
   gateway_status && return 0
   if systemd_available; then
-    say "Starting the managed OpenClaw Gateway"
+    say "正在启动受 systemd 管理的 OpenClaw Gateway"
     install_gateway_service
     run_as_openclaw "$OPENCLAW_COMMAND" gateway start >/dev/null 2>&1 || true
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
     done
-    fail "Gateway is unavailable. Run: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+    fail "Gateway 不可用。请执行：sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
   else
     start_container_gateway
   fi
@@ -134,13 +134,13 @@ ensure_gateway() {
 
 restart_gateway_after_channel_login() {
   if systemd_available; then
-    say "Reloading the Gateway after WeChat login"
+    say "微信登录完成，正在重载 Gateway"
     run_as_openclaw "$OPENCLAW_COMMAND" gateway restart >/dev/null 2>&1 || true
     for _ in 1 2 3 4 5 6; do
       sleep 5
       gateway_status && return 0
     done
-    fail "Gateway did not recover after WeChat login. Run: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
+    fail "微信登录后 Gateway 未恢复。请执行：sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND gateway status"
   else
     start_container_gateway
   fi
@@ -150,13 +150,13 @@ start_container_notifier() {
   local pid_file="$RUNTIME_DIR/notifier.pid"
   local log_file="$RUNTIME_DIR/notifier.log"
   local loop_script="$SKILL_DIR/scripts/notify-openclaw-loop.sh"
-  [[ -n "$channel" && -n "$target" ]] || { note "Notifications are waiting for a verified recipient."; return 0; }
+  [[ -n "$channel" && -n "$target" ]] || { note "通知功能正在等待已验证的接收者。"; return 0; }
   if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
     return 0
   fi
   install -d -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" -m 0750 "$RUNTIME_DIR"
   run_as_openclaw bash -lc "nohup $(printf '%q' "$loop_script") > $(printf '%q' "$log_file") 2>&1 & echo \$! > $(printf '%q' "$pid_file")"
-  note "Container notifier started; log: $log_file"
+  note "容器通知进程已启动，日志：$log_file"
 }
 
 install_notification_runtime() {
@@ -211,19 +211,19 @@ chmod 0640 "$AGENT_ENV_FILE"
 
 OPENCLAW_COMMAND="$(find_openclaw || true)"
 if [[ -z "$OPENCLAW_COMMAND" ]]; then
-  [[ "$INSTALL_OPENCLAW" -eq 1 || "$AUTO_SETUP" -eq 1 ]] || fail "OpenClaw is not installed. Re-run with --install-openclaw."
-  say "Installing OpenClaw with the official installer"
+  [[ "$INSTALL_OPENCLAW" -eq 1 || "$AUTO_SETUP" -eq 1 ]] || fail "尚未安装 OpenClaw，请携带 --install-openclaw 参数重新运行。"
+  say "正在通过 OpenClaw 官方安装器安装"
   # Skip the installer's unrestricted onboarding. The guided `onboard` call below
   # is deliberately limited to model configuration; this script owns channel setup.
   run_as_openclaw bash -lc 'curl --proto "=https" --tlsv1.2 -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard --no-prompt'
   OPENCLAW_COMMAND="$(find_openclaw || true)"
-  [[ -n "$OPENCLAW_COMMAND" ]] || fail "OpenClaw installation finished but its command was not found. Log in as $OPENCLAW_USER and rerun this script."
+  [[ -n "$OPENCLAW_COMMAND" ]] || fail "OpenClaw 安装完成但未找到命令。请以用户 $OPENCLAW_USER 登录后重新运行脚本。"
 fi
 
 if [[ ! -f "$OPENCLAW_HOME/.openclaw/openclaw.json" ]]; then
-  [[ "$NON_INTERACTIVE" -eq 0 ]] || fail "Model configuration requires an interactive terminal. Rerun without --non-interactive."
-  say "Configure the model provider"
-  note "Only the model provider/key screens require your input. Do not paste API keys into chat."
+  [[ "$NON_INTERACTIVE" -eq 0 ]] || fail "模型配置需要交互式终端，请不要使用 --non-interactive 重新运行。"
+  say "请配置模型服务商"
+  note "只有模型服务商和 API Key 页面需要手动输入。请勿把 API Key 发到聊天记录中。"
   onboarding=(onboard --accept-risk --flow quickstart --skip-channels --skip-ui --skip-hooks --skip-search --skip-skills)
   if systemd_available; then
     onboarding+=(--install-daemon)
@@ -235,8 +235,8 @@ fi
 
 SKILL_SOURCE="$APP_DIR/openclaw-skill/douyin-fire-admin"
 SKILL_DIR="$OPENCLAW_HOME/.openclaw/workspace/skills/douyin-fire-admin"
-[[ -d "$SKILL_SOURCE" ]] || fail "Bundled skill is missing: $SKILL_SOURCE"
-say "Installing the douyin-fire-admin Skill"
+[[ -d "$SKILL_SOURCE" ]] || fail "缺少内置 Skill：$SKILL_SOURCE"
+say "正在安装 douyin-fire-admin Skill"
 install -d -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" -m 0755 "$(dirname "$SKILL_DIR")"
 rsync -a --delete --exclude '__pycache__/' "$SKILL_SOURCE/" "$SKILL_DIR/"
 chown -R "$OPENCLAW_USER:$OPENCLAW_USER" "$SKILL_DIR"
@@ -245,15 +245,15 @@ chmod 0755 "$SKILL_DIR/scripts/notify-openclaw-loop.sh"
 channel="$(get_env_value OPENCLAW_CHANNEL "$OPENCLAW_ENV_FILE")"
 target="${NOTIFY_TARGET:-$(get_env_value OPENCLAW_NOTIFY_TARGET "$OPENCLAW_ENV_FILE")}"
 if [[ "$WITH_WECHAT" -eq 1 ]]; then
-  say "Installing and connecting WeChat"
+  say "正在安装并连接微信"
   if wechat_channel_connected; then
-    note "WeChat is already connected; skipping the QR login."
+    note "微信已连接，跳过重复扫码。"
   elif wechat_plugin_installed; then
-    note "WeChat plugin is installed. Scan the QR code with the dedicated OpenClaw WeChat account."
+    note "微信插件已安装，请使用专用 OpenClaw 微信号扫描二维码。"
     run_as_openclaw "$OPENCLAW_COMMAND" channels login --channel openclaw-weixin
     restart_gateway_after_channel_login
   else
-    note "Install the WeChat plugin, then scan its one QR code with the dedicated OpenClaw WeChat account."
+    note "正在安装微信插件，随后请使用专用 OpenClaw 微信号扫描唯一的一张二维码。"
     # The official WeChat plugin installer performs the initial QR login itself.
     # Calling `channels login` after it would prompt for a second QR code.
     run_as_openclaw npx -y @tencent-weixin/openclaw-weixin-cli install
@@ -262,23 +262,23 @@ if [[ "$WITH_WECHAT" -eq 1 ]]; then
   fi
   channel="openclaw-weixin"
   if [[ -z "$target" && "$NON_INTERACTIVE" -eq 0 ]]; then
-    note "From the receiving WeChat account, send any message to the account just connected."
-    note "Waiting up to 3 minutes for the receiver pairing request; no terminal input is needed."
+    note "请使用接收通知的微信号，向刚连接的机器人微信号发送任意私聊消息。"
+    note "正在等待接收号配对请求，最长 3 分钟；不需要在终端输入任何内容。"
     if wait_for_wechat_recipient; then
-      note "WeChat receiver bound automatically."
+      note "微信接收号已自动完成配对。"
     else
-      note "Receiver was not found yet. The Skill works, but automatic reports will stay off until you rerun this script after the receiver sends a pairing message."
+      note "暂未发现接收号。Skill 可以正常使用，但自动汇报会保持关闭；请让接收号发消息后重新运行此脚本。"
     fi
   fi
 elif [[ "$NON_INTERACTIVE" -eq 0 && "$AUTO_SETUP" -eq 0 ]]; then
-  read -r -p "OpenClaw notification channel${channel:+ [$channel]} (leave blank to configure later): " entered_channel
-  read -r -p "Notification recipient / target${target:+ [$target]} (leave blank to configure later): " entered_target
+  read -r -p "OpenClaw 通知频道${channel:+ [$channel]}（留空稍后配置）：" entered_channel
+  read -r -p "通知接收者 / 目标${target:+ [$target]}（留空稍后配置）：" entered_target
   channel="${entered_channel:-$channel}"
   target="${entered_target:-$target}"
 fi
 
 if [[ "$channel" == *$'\n'* || "$target" == *$'\n'* ]]; then
-  fail "Channel and target cannot contain a newline."
+  fail "频道和接收者不能包含换行符。"
 fi
 umask 077
 printf 'DOUYIN_FIRE_ENV_FILE=%s\nOPENCLAW_COMMAND=%s\nOPENCLAW_CHANNEL=%s\nOPENCLAW_NOTIFY_TARGET=%s\n' \
@@ -288,14 +288,14 @@ chmod 0600 "$OPENCLAW_ENV_FILE"
 ensure_gateway
 install_notification_runtime
 
-say "OpenClaw integration is ready"
-note "Skill: douyin-fire-admin"
-note "Verify: sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND skills info douyin-fire-admin"
+say "OpenClaw 集成已就绪"
+note "已安装 Skill：douyin-fire-admin"
+note "验证命令：sudo -u $OPENCLAW_USER HOME=$OPENCLAW_HOME $OPENCLAW_COMMAND skills info douyin-fire-admin"
 if [[ -n "$channel" && -n "$target" ]]; then
-  note "Reports: enabled through $channel"
+  note "自动汇报：已通过 $channel 启用"
 else
-  note "Reports: waiting for a recipient. For WeChat, rerun this script with --wechat after the receiver sends a pairing message."
+  note "自动汇报：正在等待接收者。微信接收号发送配对消息后，请携带 --wechat 重新运行此脚本。"
 fi
 if ! systemd_available; then
-  note "Container notice: Gateway and notifier are running with nohup. Configure your container to restart automatically, then rerun this script after a container rebuild."
+  note "容器提示：Gateway 和通知进程由 nohup 运行。请配置容器自动重启，并在容器重建后重新运行此脚本。"
 fi
